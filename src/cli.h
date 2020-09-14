@@ -1,13 +1,9 @@
-/**
-******************************************************************************
-*   @file     Timer.h
-*   @brief    Header file for the Timer part.
-*   @version  V0.1
-*   @author   ADI
-*   @date     January 2017
-*
-*******************************************************************************
-* Copyright 2017(c) Analog Devices, Inc.
+/***************************************************************************//**
+*   @file   cli.h
+*   @brief  CLI header.
+*   @author Andrei Drimbarean (andrei.drimbarean@analog.com)
+********************************************************************************
+* Copyright 2018(c) Analog Devices, Inc.
 *
 * All rights reserved.
 *
@@ -41,60 +37,81 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#ifndef TIMER_H_
-#define TIMER_H_
+#ifndef CLI_H_
+#define CLI_H_
 
 /******************************************************************************/
 /***************************** Include Files **********************************/
 /******************************************************************************/
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "uart.h"
 
 /******************************************************************************/
 /********************** Macros and Constants Definitions **********************/
 /******************************************************************************/
 
-#define TIMER_MAX_SW_PERSACLE 32
+#define _NC 0
+#define _BS 8
+#define _CR 13
+#define _LF 10
+#define _TB 9
+#define _ESC 27
+#define _SP 32
+#define _HM 2
 
 /******************************************************************************/
 /*************************** Types Declarations *******************************/
 /******************************************************************************/
 
-struct timer_counter_init {
-	float f_update; /* Update timer frequency */
-	uint8_t update_timer; /* Update timer ID */
-	void *callback_func_ptr; /* Pointer to the callback */
-	void *callback_param; /* Pointer to the application passed CB parameter */
+typedef  int32_t (*cmd_func)(void *, uint8_t *);
+
+struct cli_init_param {
+	struct uart_init_param uart_init;
 };
 
-struct timer_counter_desc {
-	float f_update; /* Update timer frequency */
-	uint8_t sw_prescaler; /* Update timer software prescaler compare value */
-	uint8_t update_timer; /* Update timer ID */
+struct cli_desc {
+	struct uart_desc *uart_device;
+	uint8_t **cmd_commands;
+	cmd_func *v_cmd_fun;
+	void *device_descriptor;
+	uint8_t *command_size;
 };
 
 /******************************************************************************/
 /************************ Functions Declarations ******************************/
 /******************************************************************************/
 
-/* Power and delay timers initialization function. */
-int32_t timer_start(void);
+/* Setup the CLI module of the application. */
+int32_t cli_setup(struct cli_desc **device, struct cli_init_param *init_param);
 
-/* Delay function of 1ms or more. */
-void timer_sleep(uint32_t ticks);
+/* Free resources allocated by cli_setup(). */
+int32_t cli_remove(struct cli_desc *dev);
 
-/* Initializes a timer with a callback. */
-int32_t timer_counter_setup(struct timer_counter_desc **device,
-			    struct timer_counter_init *init_param);
+/* Implements CLI feedback. */
+int32_t cli_parse(struct cli_desc *dev);
 
-/* Stop timer and free the resources allocated by timer_counter_setup(). */
-int32_t timer_counter_remove(struct timer_counter_desc *dev);
+/* Implements the CLI logic. */
+int32_t cli_process(struct cli_desc *dev);
 
-/* Activate/deactivate timer. */
-int32_t timer_counter_activate(struct timer_counter_desc *dev, bool enable);
+/* Get the CLI commands and correlate them to functions. */
+void cli_find_command(struct cli_desc *dev, uint8_t *command,
+		      cmd_func* function);
 
-/* Change the rate of the timer. */
-int32_t timer_counter_set_rate(struct timer_counter_desc *dev, float new_rate);
+/* Display command prompt for the user on the CLI at the beginning of the
+ * program. */
+int32_t cli_cmd_prompt(struct cli_desc *dev, uint8_t *app_name);
 
-#endif /* TIMER_H_ */
+/* Update the current command vector. */
+void cli_load_command_vector(struct cli_desc *dev, cmd_func *command_vector);
+
+/* Update the current command call vector. */
+void cli_load_command_calls(struct cli_desc *dev, uint8_t **command_calls);
+
+/* Update the current command size vector. */
+void cli_load_command_sizes(struct cli_desc *dev, uint8_t *command_sizes);
+
+/* Update the current handler pointer. */
+void cli_load_descriptor_pointer(struct cli_desc *dev,
+				 void *command_descriptor);
+
+#endif /* CLI_H_ */

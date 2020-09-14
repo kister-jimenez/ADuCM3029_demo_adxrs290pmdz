@@ -1,6 +1,5 @@
 /***************************************************************************//**
  *   @file   error.h
- *   @brief  Error codes definition
  *   @author DBogdan (dragos.bogdan@analog.com)
 ********************************************************************************
  * Copyright 2019(c) Analog Devices, Inc.
@@ -40,19 +39,11 @@
 #ifndef ERROR_H_
 #define ERROR_H_
 
-#include <errno.h>
-
 /******************************************************************************/
 /********************** Macros and Constants Definitions **********************/
 /******************************************************************************/
 
-#ifndef SUCCESS
 #define SUCCESS		0
-#endif
-#ifndef FAILURE
 #define FAILURE		-1
-#endif
-
-#define IS_ERR_VALUE(x)	((x) < 0)
 
 #endif // ERROR_H_

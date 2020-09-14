@@ -1,7 +1,7 @@
 /***************************************************************************//**
- *   @file   aducm3029/delay.c
- *   @brief  Implementation of DELAY functions for ADuCM302x.
- *   @author Mihail Chindris (mihail.chindris@analog.com)
+ *   @file   delay.c
+ *   @brief  Implementation of Generic Platform Drivers.
+ *   @author DBogdan (dragos.bogdan@analog.com)
 ********************************************************************************
  * Copyright 2019(c) Analog Devices, Inc.
  *
@@ -38,98 +38,34 @@
 *******************************************************************************/
 
 /******************************************************************************/
-/************************* Include Files **************************************/
+/***************************** Include Files **********************************/
 /******************************************************************************/
 
 #include "delay.h"
 #include "timer.h"
-#include "error.h"
-
-/******************************************************************************/
-/****************************** Global Variables*******************************/
-/******************************************************************************/
-
-/** Used for counting microseconds */
-static struct timer_desc *us_timer;
-
-/**
- *  Used to keep the hardware timer enabled to avoid delay given by its
- * initialization
- */
-static struct timer_desc *dummy_timer;
-
-/** Used for counting milliseconds */
-static struct timer_desc *ms_timer;
 
 /******************************************************************************/
 /************************ Functions Definitions *******************************/
 /******************************************************************************/
 
 /**
- * @brief Initialize the timer descriptor
- * @param timer - Value where the instance of the new initialized timer is
- * stored
- * @param is_us - If 0 the timer counts milliseconds, otherwise it counts
- * microseconds
- * @return 1 on success, 0 otherwise
- */
-static uint32_t initialize_timer(struct timer_desc **timer, uint32_t is_us)
-{
-	struct timer_init_param param;
-
-	param.id = 0;
-	param.freq_hz = is_us ? 1000000u : 1000u;
-	param.load_value = 0;
-
-	if (is_us) {
-		if (SUCCESS != timer_init(&dummy_timer, &param))
-			return 0;
-		timer_start(dummy_timer);
-	}
-
-	if (SUCCESS != timer_init(timer, &param))
-		return 0;
-	return 1;
-}
-
-/**
- * @brief Starts the specified timer instance and waits until it have the
- * desired value.
- * @param timer - Descriptor of the timer instance.
- * @param value - Value the timer have to count to.
- */
-static void start_and_wait(struct timer_desc *timer, uint32_t value)
-{
-	uint32_t count;
-
-	timer_counter_set(timer, 0);
-	timer_start(timer);
-	do {
-		timer_counter_get(timer, &count);
-	} while (count < value);
-	timer_stop(timer);
-}
-
-/**
- * @brief Wait until usecs microseconds passed.
- * @param usecs - Number of microseconds to wait
+ * @brief Generate microseconds delay.
+ * @param usecs - Delay in microseconds.
+ * @return None.
  */
 void udelay(uint32_t usecs)
 {
-	if (!us_timer)
-		if (!initialize_timer(&us_timer, 1))
-			return ;
-	start_and_wait(us_timer, usecs);
+	if (usecs) {
+		// Unused variable - fix compiler warning
+	}
 }
 
 /**
- * @brief Wait until msecs milliseconds passed.
- * @param msecs - Number of milliseconds to wait
+ * @brief Generate miliseconds delay.
+ * @param msecs - Delay in miliseconds.
+ * @return None.
  */
 void mdelay(uint32_t msecs)
 {
-	if (!ms_timer)
-		if (!initialize_timer(&ms_timer, 0))
-			return ;
-	start_and_wait(ms_timer, msecs);
+	timer_sleep(msecs);
 }

@@ -1,7 +1,6 @@
 /***************************************************************************//**
- *   @file   irq.h
- *   @brief  Header file of IRQ interface.
- *   @author Cristian Pop (cristian.pop@analog.com)
+ *   @file   interrupt.h
+ *   @author Andrei Drimbarean (Andrei.Drimbarean@analog.com)
 ********************************************************************************
  * Copyright 2019(c) Analog Devices, Inc.
  *
@@ -37,100 +36,39 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#ifndef IRQ_H_
-#define IRQ_H_
+#ifndef PLATFORM_INCLUDE_INTERRUPT_H_
+#define PLATFORM_INCLUDE_INTERRUPT_H_
 
 /******************************************************************************/
 /***************************** Include Files **********************************/
 /******************************************************************************/
 
-#include <stdint.h>
+#include <stdio.h>
+#include <drivers/xint/adi_xint.h>
 
 /******************************************************************************/
 /*************************** Types Declarations *******************************/
 /******************************************************************************/
 
-/**
- * @enum irq_uart_event_e
- * @brief Possible events for uart interrupt
- */
-enum irq_uart_event_e {
-	/** Write operation finalized */
-	WRITE_DONE,
-	/** Read operation finalized */
-	READ_DONE,
-	/** An error occurred */
-	ERROR
-};
-
-/**
- * @struct irq_init_param
- * @brief Structure holding the initial parameters for Interrupt Request.
- */
-struct irq_init_param {
-	/** Interrupt request controller ID. */
-	uint32_t	irq_ctrl_id;
-	/** IRQ extra parameters (device specific) */
-	void		*extra;
-};
-
-/**
- * @struct irq_desc
- * @brief Structure for Interrupt Request descriptor.
- */
-struct irq_ctrl_desc {
-	/** Interrupt request controller ID. */
-	uint32_t	irq_ctrl_id;
-	/** IRQ extra parameters (device specific) */
-	void		*extra;
-};
-
-/**
- * @struct callback_desc
- * @brief Structure describing a callback to be registered
- */
-struct callback_desc {
-	/**
-	 * Callback to be called when the event an event occurs
-	 *  @param ctx - Same as \ref callback_desc.ctx
-	 *  @param event - Event that generated the callback
-	 *  @param extra - Platform specific data
-	 */
-	void (*callback)(void *ctx, uint32_t event, void *extra);
-	/** Parameter to be passed when the callback is called */
-	void *ctx;
-	/** Platform specific configuration for a callback */
-	void *config;
+struct intr_dev {
+	uint8_t mem_vector[ADI_XINT_MEMORY_SIZE];
 };
 
 /******************************************************************************/
 /************************ Functions Declarations ******************************/
 /******************************************************************************/
 
-/* Initialize a interrupt controller peripheral. */
-int32_t irq_ctrl_init(struct irq_ctrl_desc **desc,
-		      const struct irq_init_param *param);
+//todo: comment intr_register_callback
+int32_t intr_enable_irq(uint32_t int_id, uint8_t mode);
 
-/* Free the resources allocated by irq_ctrl_init(). */
-int32_t irq_ctrl_remove(struct irq_ctrl_desc *desc);
+//todo: comment intr_register_callback
+int32_t intr_register_callback(uint32_t int_id, void *cb_function_pointer,
+			       void *cb_parameter);
 
-/* Register a callback to handle the irq events */
-int32_t irq_register_callback(struct irq_ctrl_desc *desc, uint32_t irq_id,
-			      struct callback_desc *callback_desc);
+//todo: comment intr_setup
+int32_t intr_setup(struct intr_dev **device);
 
-/* Unregisters a generic IRQ handling function */
-int32_t irq_unregister(struct irq_ctrl_desc *desc, uint32_t irq_id);
+//todo: comment intr_remove
+int32_t intr_remove(struct intr_dev *dev);
 
-/* Global interrupt enable */
-int32_t irq_global_enable(struct irq_ctrl_desc *desc);
-
-/* Global interrupt disable */
-int32_t irq_global_disable(struct irq_ctrl_desc *desc);
-
-/* Enable specific interrupt */
-int32_t irq_enable(struct irq_ctrl_desc *desc, uint32_t irq_id);
-
-/* Disable specific interrupt */
-int32_t irq_disable(struct irq_ctrl_desc *desc, uint32_t irq_id);
-
-#endif // IRQ_H_
+#endif /* PLATFORM_INCLUDE_INTERRUPT_H_ */

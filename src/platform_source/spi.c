@@ -1,7 +1,6 @@
 /***************************************************************************//**
- *   @file   aducm3029/spi.c
- *   @brief  Implementation of SPI driver for ADuCM302x
- *   @author Mihail Chindris (mihail.chindris@analog.com)
+ *   @file   spi.c
+ *   @author DBogdan (dragos.bogdan@analog.com)
 ********************************************************************************
  * Copyright 2019(c) Analog Devices, Inc.
  *
@@ -38,151 +37,125 @@
 *******************************************************************************/
 
 /******************************************************************************/
-/************************* Include Files **************************************/
+/***************************** Include Files **********************************/
 /******************************************************************************/
 
-#include "spi_extra.h"
-#include "spi.h"
+#include "../platform_include/spi.h"
+#include <drivers/spi/adi_spi.h>
+#include "../platform_include/error.h"
+#include "gpio.h"
 #include "error.h"
 #include <stdlib.h>
-#include "util.h"
-
-#define	NB_SPI_DEVICES	3
-#define	MAX_CS_NUMBER	3
 
 /******************************************************************************/
-/*****************************  Variables   **********************************/
+/************************** Variable Definitions ******************************/
 /******************************************************************************/
 
-/** Structure storing the device info */
-static struct aducm_device_desc	*devices[NB_SPI_DEVICES];
+/* Master SPI device handle */
+ADI_SPI_HANDLE h_spi_device;
+/* Device memory required for operate Master SPI device */
+uint8_t master_spi_device_mem[ADI_SPI_MEMORY_SIZE];
+uint8_t spi_init_flag = 0; /* Number of SPI controllers initialized */
 
 /******************************************************************************/
 /************************ Functions Definitions *******************************/
 /******************************************************************************/
 
 /**
- * @brief Update hardware device if needed.
- *
- * Check if the current state of the SPI device match with the setting of the
- * the current instance. If not, the settings for the SPI device will be
- * changed.
- * @param dev - SPI instance
- * @param desc - SPI device descriptor
- * @param init - True if it is the first configuration of the SPI device.
- * @return
- */
-static int32_t config_device(struct aducm_device_desc *dev,
-			     struct spi_desc *desc,
-			     bool init)
-{
-	struct aducm_spi_desc *aducm_desc = desc->extra;
-
-	if (init || desc->max_speed_hz != dev->bitrate) {
-		if (ADI_SPI_SUCCESS != adi_spi_SetBitrate(dev->spi_handle,
-				desc->max_speed_hz))
-			return FAILURE;
-		if (init) {
-			if (ADI_SPI_SUCCESS != adi_spi_GetBitrate(
-				    dev->spi_handle,
-				    &dev->bitrate))
-				return FAILURE;
-			desc->max_speed_hz = dev->bitrate;
-		}
-	}
-	if (init || desc->chip_select != dev->cs) {
-		adi_spi_SetChipSelect(dev->spi_handle, desc->chip_select);
-		dev->cs = desc->chip_select;
-	}
-	if (init || desc->mode != dev->mode) {
-		adi_spi_SetClockPhase(dev->spi_handle, desc->mode & SPI_CPHA);
-		adi_spi_SetClockPolarity(dev->spi_handle,
-					 desc->mode & SPI_CPOL);
-		dev->mode = desc->mode;
-	}
-	if (init || aducm_desc->aducm_conf.master_mode != dev->master_mode) {
-		adi_spi_SetMasterMode(dev->spi_handle,
-				      aducm_desc->aducm_conf.master_mode);
-		dev->master_mode = aducm_desc->aducm_conf.master_mode;
-	}
-	if (init || aducm_desc->aducm_conf.continuous_mode
-	    != dev->continuous_mode) {
-		adi_spi_SetContinuousMode(dev->spi_handle,
-					  aducm_desc->aducm_conf.continuous_mode);
-		dev->continuous_mode = aducm_desc->aducm_conf.continuous_mode;
-	}
-
-	return SUCCESS;
-}
-
-/**
  * @brief Initialize the SPI communication peripheral.
  * @param desc - The SPI descriptor.
- * @param param - The structure that contains the SPI parameters.
+ * @param init_param - The structure that contains the SPI parameters.
  * @return SUCCESS in case of success, FAILURE otherwise.
  */
 int32_t spi_init(struct spi_desc **desc,
 		 const struct spi_init_param *param)
 {
-	struct spi_desc			*spi_desc;
-	struct aducm_spi_desc		*aducm_desc;
-	struct aducm_spi_init_param	*config;
-	struct aducm_device_desc	*dev;
+	/* Variable for storing the return code from SPI device */
+	int32_t ret;
+	struct spi_desc *dev;
 
-	/* Initial checks */
-	if (!desc || !param || !(param->extra))
-		return FAILURE;
-
-	config = param->extra;
-	if (config->spi_channel >= NB_SPI_DEVICES ||
-	    param->chip_select > MAX_CS_NUMBER)
+	dev = calloc(1, sizeof *dev);
+	if (!dev)
 		return FAILURE;
 
-	/* Memory allocation */
-	spi_desc = (struct spi_desc *)calloc(1, sizeof(*spi_desc));
-	if (!spi_desc)
-		return FAILURE;
-	aducm_desc = (struct aducm_spi_desc *)calloc(1, sizeof(*aducm_desc));
-	if (!aducm_desc) {
-		free(spi_desc);
-		return FAILURE;
+	dev->chip_select = 0;
+	dev->id = param->id;
+	dev->max_speed_hz = param->max_speed_hz;
+	dev->mode = param->mode;
+	dev->type = param->type;
+	dev->extra = param->extra;
+
+	/* To cope with more than one SPI device descriptor and SPI controller on
+	 * the first pass and only the descriptors on subsequent passes */
+	if(spi_init_flag != 0) {
+		*desc = dev;
+		spi_init_flag++;
+		return SUCCESS;
 	}
 
-	/* Initialize descriptor */
-	aducm_desc->aducm_conf = *config;
-	spi_desc->extra = aducm_desc;
-	spi_desc->chip_select = (1 << param->chip_select);
-	spi_desc->max_speed_hz = param->max_speed_hz;
-	spi_desc->mode = param->mode;
+	/* Open the SPI device. It opens in Master mode by default */
+	ret = adi_spi_Open(dev->id, master_spi_device_mem, ADI_SPI_MEMORY_SIZE,
+			   &h_spi_device);
+	if(ret != SUCCESS)
+		goto error;
 
-	dev = devices[config->spi_channel];
-	/* If device not initialized initialize it */
-	if (!dev) {
-		dev = (struct aducm_device_desc *)calloc(1, sizeof(*dev));
-		if (!dev) {
-			free(spi_desc);
-			free(aducm_desc);
-			return FAILURE;
+	/* Set the bit rate  */
+	ret = adi_spi_SetBitrate(h_spi_device, dev->max_speed_hz);
+	if(ret != SUCCESS)
+		goto error;
+
+	/* Set the chip select. */
+	/* If no GPIO has been chosen use hardware CS */
+	if (param->chip_select == 0xFF) {
+		if(dev->id == SPI_ARDUINO) {
+			/* SPI_ARDUINO uses CS1 */
+			ret = adi_spi_SetChipSelect(h_spi_device, ADI_SPI_CS1);
+			if(ret != SUCCESS)
+				goto error;
+		} else {
+			/* SPI_BLE or SPI_PMOD */
+			/* SPI_BLE and SPI_PMOD use CS0 */
+			ret = adi_spi_SetChipSelect(h_spi_device, ADI_SPI_CS0);
+			if(ret != SUCCESS)
+				goto error;
 		}
-		if (ADI_SPI_SUCCESS != adi_spi_Open(config->spi_channel,
-						    dev->buffer,
-						    ADI_SPI_MEMORY_SIZE,
-						    &dev->spi_handle))
-			goto failure;
-		if (SUCCESS != config_device(dev, spi_desc, true))
-			goto failure;
-		devices[config->spi_channel] = dev;
+	} else {
+		ret = adi_spi_SetChipSelect(h_spi_device, ADI_SPI_CS0);
+		if(ret != SUCCESS)
+			goto error;
+		ret = gpio_get(&dev->chip_select, param->chip_select);
+		if(ret != SUCCESS)
+			goto error;
+		ret = gpio_direction_output(dev->chip_select, GPIO_LOW);
+		if(ret != SUCCESS)
+			goto error;
 	}
-	dev->ref_instances++;
-	aducm_desc->dev = dev;
-	*desc = spi_desc;
+	ret = adi_spi_SetContinuousMode(h_spi_device, true);
+	if(ret != SUCCESS)
+		goto error;
+	ret = adi_spi_SetIrqmode(h_spi_device, true);
+	if(ret != SUCCESS)
+		goto error;
+	/* set Clock polarity low */
+	ret = adi_spi_SetClockPolarity(h_spi_device, (dev->mode & 0x02) >> 1);
+	if(ret != SUCCESS)
+		goto error;
+	/* set Clock phase leading */
+	ret = adi_spi_SetClockPhase(h_spi_device, (dev->mode & 0x1) >> 0);
+	if(ret != SUCCESS)
+		goto error;
 
-	return SUCCESS;
-failure:
+	/* Return device descriptor */
+	*desc = dev;
+
+	/* No longer the first SPI device */
+	spi_init_flag++;
+
+	return ret;
+error:
 	free(dev);
-	free(spi_desc);
-	free(aducm_desc);
-	return FAILURE;
+
+	return ret;
 }
 
 /**
@@ -192,30 +165,37 @@ failure:
  */
 int32_t spi_remove(struct spi_desc *desc)
 {
-	struct aducm_spi_desc *aducm_desc;
+	int32_t ret;
 
-	if (!desc || !desc->extra)
-		return FAILURE;
+	if(!desc)
+		return -1;
 
-	aducm_desc = desc->extra;
-	if (!aducm_desc->dev)
-		return FAILURE;
-
-	if (aducm_desc->dev->ref_instances == 1) {
-		if (ADI_SPI_SUCCESS != adi_spi_Close(
-			    aducm_desc->dev->spi_handle))
-			return FAILURE;
-		free(aducm_desc->dev);
-		devices[aducm_desc->aducm_conf.spi_channel] = NULL;
+	if(desc->chip_select) {
+		ret = gpio_remove(desc->chip_select);
+		if(ret != SUCCESS)
+			return ret;
 	}
-	free(aducm_desc);
+
 	free(desc);
 
-	return SUCCESS;
+	/* If not the last SPI device to disconnect don't close the controller
+	 * yet */
+	if(spi_init_flag > 1) {
+		spi_init_flag--;
+		return SUCCESS;
+	}
+
+	ret = adi_spi_Close(h_spi_device);
+	if(ret != SUCCESS)
+		return ret;
+
+	spi_init_flag--;
+
+	return ret;
 }
 
 /**
- * @brief Write and read data to/from SPI. If bytes number is 0 the function will return failure.
+ * @brief Write and read data to/from SPI.
  * @param desc - The SPI descriptor.
  * @param data - The buffer with the transmitted/received data.
  * @param bytes_number - Number of bytes to write/read.
@@ -223,58 +203,36 @@ int32_t spi_remove(struct spi_desc *desc)
  */
 int32_t spi_write_and_read(struct spi_desc *desc,
 			   uint8_t *data,
-			   uint16_t bytes_number)
+			   uint8_t bytes_number)
 {
-	struct aducm_spi_desc		*aducm_desc;
-	ADI_SPI_TRANSCEIVER		spi_trans;
-	uint16_t			n;
+	ADI_SPI_TRANSCEIVER m_spi_transceive;
+	int32_t ret;
 
-	if (!desc)
-		return FAILURE;
+	m_spi_transceive.pTransmitter = data;
+	m_spi_transceive.TransmitterBytes = bytes_number;
+	m_spi_transceive.nTxIncrement = 1;
+	m_spi_transceive.pReceiver = data;
+	m_spi_transceive.ReceiverBytes = bytes_number;
+	m_spi_transceive.nRxIncrement = 1;
+	m_spi_transceive.bDMA = false;
+	m_spi_transceive.bRD_CTL = false;
 
-	aducm_desc = desc->extra;
-	if (!aducm_desc->dev)
-		return FAILURE;
-
-	if (SUCCESS != config_device(aducm_desc->dev, desc, false))
-		return FAILURE;
-
-	if (bytes_number == 0)
-		return FAILURE;
-
-	spi_trans.nTxIncrement = 1;
-	spi_trans.nRxIncrement = 1;
-	spi_trans.bDMA = aducm_desc->aducm_conf.dma;
-	spi_trans.bRD_CTL = aducm_desc->aducm_conf.half_duplex;
-
-	while (bytes_number) {
-		if (aducm_desc->aducm_conf.dma)
-			/* Maximum 2048 bytes over dma */
-			n = max(2048, bytes_number);
-		else
-			n = bytes_number;
-
-		spi_trans.TransmitterBytes = n;
-		spi_trans.pTransmitter = data;
-		spi_trans.ReceiverBytes = n;
-		spi_trans.pReceiver = data;
-
-		if (aducm_desc->aducm_conf.master_mode == MASTER) {
-			if (ADI_SPI_SUCCESS != adi_spi_MasterReadWrite(
-				    aducm_desc->dev->spi_handle,
-				    &spi_trans))
-				return FAILURE;
-		} else {
-			if (ADI_SPI_SUCCESS != adi_spi_SlaveReadWrite(
-				    aducm_desc->dev->spi_handle,
-				    &spi_trans))
-				return FAILURE;
-		}
-
-		data += n;
-		bytes_number -= n;
+	if(desc->chip_select) {
+		ret = gpio_set_value(desc->chip_select, GPIO_LOW);
+		if(ret != SUCCESS)
+			return ret;
 	}
 
-	return SUCCESS;
-}
+	/* Wait till the data transmission is over */
+	ret = adi_spi_MasterReadWrite(h_spi_device, &m_spi_transceive);
+	if(ret != SUCCESS)
+		return ret;
 
+	if(desc->chip_select) {
+		ret = gpio_set_value(desc->chip_select, GPIO_HIGH);
+		if(ret != SUCCESS)
+			return ret;
+	}
+
+	return ret;
+}

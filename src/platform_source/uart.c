@@ -1,7 +1,6 @@
 /***************************************************************************//**
- *   @file   aducm3029/uart.c
- *   @brief  Implementation of UART driver for ADuCM302x.
- *   @author Mihail Chindris (mihail.chindris@analog.com)
+ *   @file   uart.c
+ *   @author Andrei Drimbarean (Andrei.Drimbarean@analog.com)
 ********************************************************************************
  * Copyright 2019(c) Analog Devices, Inc.
  *
@@ -38,506 +37,406 @@
 *******************************************************************************/
 
 /******************************************************************************/
-/************************* Include Files **************************************/
+/***************************** Include Files **********************************/
 /******************************************************************************/
 
-#include <drivers/uart/adi_uart.h>
 #include <stdlib.h>
+#include <drivers/uart/adi_uart.h>
 #include "uart.h"
-#include "irq.h"
-#include "uart_extra.h"
-#include "util.h"
+#include "error.h"
 
 /******************************************************************************/
-/*************************** Types Declarations *******************************/
+/************************** Variable Definitions ******************************/
 /******************************************************************************/
 
-/**
- * @struct baud_desc
- * @brief Structure of an element from \ref baud_rates_26MHz.
- * The baud rate is calculated with the formula:
- * Baudrate = (CLK_FREQ / (div_m + div_n/2048) * pow(2,osr+2) * div_c)).
- */
-struct baud_desc {
-	/** Calculated baud rate from the following parameters */
-	uint32_t	baud_rate;
-	/** From 0 to 2047 */
-	uint16_t	div_n;
-	/** From 1 to 3 */
-	uint8_t		div_m;
-	/** From 1 to 65535 */
-	uint16_t	div_c;
-	/** From 0 to 3 */
-	uint8_t		osr;
-};
-
-/**
- * @struct op_desc
- * @brief It stores the state of a operation
- */
-struct op_desc {
-	/** Is set when an write nonblocking operation is executing */
-	bool		is_nonblocking;
-	/** Current buffer*/
-	uint8_t		*buff;
-	/** Number of bytes pending to process */
-	uint32_t	pending;
-};
-
-/**
- * @struct aducm_uart_desc
- * @brief Stores specific parameter needed by the UART driver for internal
- * operations
- */
-struct aducm_uart_desc {
-	/** Handle needed by low level functions */
-	ADI_UART_HANDLE	uart_handler;
-	/** Stores the error occurred */
-	enum UART_ERROR	errors;
-	/** Set if callback is enabled */
-	bool		callback_enabled;
-	/**
-	 * Buffer needed by the ADI UART driver to operate.
-	 * This buffer allocated and aligned at runtime to 32 bits
-	 */
-	uint8_t		*adi_uart_buffer;
-	/**
-	 * Stores the offset used to align adi_uart_buffer.
-	 * Needed to deallocate \ref adi_uart_buffer
-	 */
-	uint32_t	adi_uart_buffer_offset;
-	/** Status of a write operation */
-	struct op_desc	write_desc;
-	/** Status of a read operation */
-	struct op_desc	read_desc;
-};
-
-/******************************************************************************/
-/********************** Macros and Constants Definitions **********************/
-/******************************************************************************/
-
-#define MAX_BYTES	1024u
-#define CLK_FREQ	26000000u
-#define BAUDS_NB	10u
-#if defined (__ADUCM4x50__)
-/** In ADuCM302x UART0 and UART1 are available */
-# define NUM_UART_DEVICES 2
-#else
-/** In ADuCM302x UART0 is available */
-# define NUM_UART_DEVICES 1
-#endif
-
-/** Stores calculated baud rates and parameters */
-const struct baud_desc baud_rates_26MHz[BAUDS_NB] = {
-	{9600, 1078, 3, 24, 3},
-	{19200, 1078, 3, 12, 3},
-	{38400, 1321, 3, 8, 2},
-	{57600, 1078, 3, 4, 3},
-	{115200, 1563, 1, 4, 3},
-	{230400, 1563, 1, 2, 3},
-	{460800, 1563, 1, 1, 3},
-	{921600, 1563, 1, 1, 2},
-	{1000000,1280, 1, 1, 2},
-	{1500000, 171, 1, 1, 2}
-};
-
-/**
- * Used to check if device already initialized
- */
-static uint32_t initialized[NUM_UART_DEVICES];
+/* Handle for UART device */
+ADI_UART_HANDLE h_uart_device __attribute__ ((aligned (4)));
+/* Memory for  UART driver */
+uint8_t uart_device_mem[ADI_UART_BIDIR_MEMORY_SIZE]
+__attribute__ ((aligned (4)));
+/* User UART memory */
+uint8_t uart_current_line[256]; /* CLI current buffer */
+uint8_t uart_previous_line[256]; /* CLI previous buffer */
+uint8_t uart_line_index = 0; /* CLI buffer index */
+uint8_t uart_cmd = 0; /* CLI command receive flag */
+uint8_t uart_flag = 0;
+uint8_t uart_ping_flag = 0;
+uint8_t uart_pong_flag = 0;
+volatile uint8_t ping, pong;
+volatile uint8_t *ping_ptr = &ping;
+volatile uint8_t *pong_ptr = &pong;
+static volatile int8_t tx_done = 0;
 
 /******************************************************************************/
 /************************ Functions Definitions *******************************/
 /******************************************************************************/
 
 /**
- * @brief Allocates the memory needed for the UART descriptor
- * @return Address to the allocated memory, NULL if the allocation fails.
+ * UART callback function.
+ *
+ * @param [in] cb_param - Callback parameter passed by the application.
+ * @param [in] event    - Trigger ID code.
+ * @param [in] arg      - Callback parameter passed by the driver.
+ *
+ * @return void
  */
-static struct uart_desc *alloc_desc_mem(void)
+static void uart_callback(void *cb_param, uint32_t event, void *arg)
 {
-	struct uart_desc	*desc;
-	struct aducm_uart_desc	*aducm_desc;
-	uint32_t		mem;
-
-	desc = calloc(1, sizeof(*desc));
-	if (!desc)
-		return NULL;
-	aducm_desc = calloc(1, sizeof(*aducm_desc));
-	if (!aducm_desc) {
-		free(desc);
-		return NULL;
-	}
-	desc->extra = aducm_desc;
-
-	/* Allocate and align buffer to 32 bits */
-	aducm_desc->adi_uart_buffer = calloc(1, ADI_UART_BIDIR_MEMORY_SIZE + 3);
-	if (!aducm_desc->adi_uart_buffer) {
-		free(aducm_desc);
-		free(desc);
-		return NULL;
-	}
-
-	mem = (uint32_t)aducm_desc->adi_uart_buffer;
-	aducm_desc->adi_uart_buffer = (uint8_t *)((mem+3u) & (~(3u)));
-	aducm_desc->adi_uart_buffer_offset =
-		(uint32_t)aducm_desc->adi_uart_buffer - mem;
-
-	return desc;
-}
-
-/**
- * @brief Deallocates the memory needed for the UART descriptor
- * @param desc - Descriptor to be deallocated
- */
-static void free_desc_mem(struct uart_desc *desc)
-{
-	struct aducm_uart_desc	*aducm_desc = desc->extra;
-
-	free((void *)((uint32_t)aducm_desc->adi_uart_buffer -
-		      aducm_desc->adi_uart_buffer_offset));
-	aducm_desc->adi_uart_buffer = NULL;
-	aducm_desc->adi_uart_buffer_offset = 0;
-	free(desc->extra);
-	free(desc);
-}
-
-/**
- * @brief Call the user defined callback when a read/write operation completed
- * @param desc:		Descriptor of the UART device
- * @param event:	Event ID from ADI_UART_EVENT
- * @param buff:		Pointer to the handled buffer or to an error code
- */
-static void uart_callback(void *ctx, uint32_t event, void *buff)
-{
-	struct uart_desc	*desc = ctx;
-	struct aducm_uart_desc	*extra = desc->extra;
-	uint32_t		len;
-
 	switch(event) {
-	/* Read done */
 	case ADI_UART_EVENT_RX_BUFFER_PROCESSED:
-		if (extra->read_desc.pending) {
-			len = min(extra->read_desc.pending, MAX_BYTES);
-			extra->read_desc.pending -= len;
-			adi_uart_SubmitRxBuffer(
-				(ADI_UART_HANDLE const)extra->uart_handler,
-				(void *const)extra->read_desc.buff,
-				(uint32_t const)len,
-				len > 4 ? true : false);
-			extra->read_desc.buff += len;
-		} else {
-			extra->read_desc.is_nonblocking = false;
-			if (desc->callback)
-				desc->callback(desc->callback_ctx, READ_DONE,
-					       NULL);
+		if(arg == (void *)&ping) {
+			uart_ping_flag = 2;
+		}
+		if(arg == (void *)&pong) {
+			uart_pong_flag = 2;
 		}
 		break;
-	/* Write done */
-	case ADI_UART_EVENT_TX_BUFFER_PROCESSED:
-		if (extra->write_desc.pending) {
-			len = min(extra->write_desc.pending, MAX_BYTES);
-			extra->write_desc.pending -= len;
-			adi_uart_SubmitTxBuffer(
-				(ADI_UART_HANDLE const)extra->uart_handler,
-				(void *const)extra->write_desc.buff,
-				(uint32_t const)len,
-				len > 4 ? true : false);
-			extra->write_desc.buff += len;
-		} else {
-			extra->write_desc.is_nonblocking = false;
-			if (desc->callback)
-				desc->callback(desc->callback_ctx, WRITE_DONE,
-					       NULL);
+	case ADI_UART_EVENT_NO_RX_BUFFER_EVENT:
+		if (uart_ping_flag == 0) {
+			adi_uart_SubmitRxBuffer((ADI_UART_HANDLE const)h_uart_device,
+						(void *)ping_ptr, 1, DMA_NOT_USE);
+			uart_ping_flag = 1;
 		}
+		if (uart_pong_flag == 0) {
+			adi_uart_SubmitRxBuffer((ADI_UART_HANDLE const)h_uart_device,
+						(void *)pong_ptr, 1, DMA_NOT_USE);
+			uart_pong_flag = 1;
+		}
+		break;
+	case ADI_UART_EVENT_TX_BUFFER_PROCESSED:
+		tx_done--;
 		break;
 	default:
-		extra->errors |= (uint32_t)buff;
-		extra->read_desc.is_nonblocking = false;
-		extra->write_desc.is_nonblocking = false;
-		if (desc->callback)
-			desc->callback(desc->callback_ctx, ERROR, buff);
 		break;
 	}
 }
 
 /**
- * @brief Read data from UART. Blocking function
- * @param desc:	Descriptor of the UART device
- * @param data:	Buffer where data will be read
- * @param bytes_number:	Number of bytes to be read. Between 1 and 1024
- * @return \ref SUCCESS in case of success, \ref FAILURE otherwise.
- */
-int32_t uart_read(struct uart_desc *desc, uint8_t *data,
-		  uint32_t bytes_number)
-{
-	struct aducm_uart_desc	*extra;
-	uint32_t		errors;
-	uint32_t		to_read;
-	uint32_t		idx;
-
-	if (!desc || !data)
-		return FAILURE;
-
-	extra = desc->extra;
-	if (bytes_number == 0) {
-		errors = BAD_INPUT_PARAMETERS;
-		goto failure;
-	}
-
-	/* Wait until a previously uart_read_nonblocking ends */
-	while (extra->read_desc.is_nonblocking)
-		;
-
-	idx = 0;
-	while (bytes_number) {
-		to_read = min(bytes_number, MAX_BYTES);
-		if (ADI_UART_SUCCESS != adi_uart_Read(
-			    (ADI_UART_HANDLE const)extra->uart_handler,
-			    (void *const)(data + idx),
-			    (uint32_t const)to_read,
-			    bytes_number > 4 ? true : false,
-			    &errors))
-			goto failure;
-		bytes_number -= to_read;
-		idx += to_read;
-	}
-	return SUCCESS;
-failure:
-	extra->errors |= errors;
-	return FAILURE;
-}
-
-/**
- * @brief Write data to UART. Blocking function
- * @param desc:	Descriptor of the UART device
- * @param data:	Buffer with the data to be written
- * @param bytes_number:	Number of bytes to be written. Between 1 and 1024
- * @return \ref SUCCESS in case of success, \ref FAILURE otherwise.
- */
-int32_t uart_write(struct uart_desc *desc, const uint8_t *data,
-		   uint32_t bytes_number)
-{
-	struct aducm_uart_desc	*extra;
-	uint32_t		errors;
-	uint32_t		to_write;
-	uint32_t		idx;
-
-	if (!desc || !data || !bytes_number)
-		return FAILURE;
-
-	/* TODO: Add support for more than 1024 bytes */
-
-	extra = desc->extra;
-	/* Wait until a previously uart_write_nonblocking ends */
-	while (extra->write_desc.is_nonblocking)
-		;
-
-	idx = 0;
-	while (bytes_number) {
-		to_write = min(bytes_number, MAX_BYTES);
-		if (ADI_UART_SUCCESS != adi_uart_Write(
-			    (ADI_UART_HANDLE const)extra->uart_handler,
-			    (void *const)(data + idx),
-			    (uint32_t const)to_write,
-			    bytes_number > 4 ? true : false,
-			    &errors))
-			goto failure;
-		bytes_number -= to_write;
-		idx += to_write;
-	}
-
-	return SUCCESS;
-
-failure:
-	extra->errors |= errors;
-	return FAILURE;
-}
-
-/**
- * @brief Submit reading buffer to the UART driver.
+ * Initialize and start UART communication and UART controller descriptor
+ * structure.
  *
- * Buffer is used until bytes_number bytes are read.
- * @param desc:	Descriptor of the UART device
- * @param data:	Buffer where data will be read
- * @param bytes_number:	Number of bytes to be read.
- * @return \ref SUCCESS in case of success, \ref FAILURE otherwise.
- */
-int32_t uart_read_nonblocking(struct uart_desc *desc, uint8_t *data,
-			      uint32_t bytes_number)
-{
-	struct aducm_uart_desc	*extra;
-	uint32_t		to_read;
-
-	if (!desc || !data || !bytes_number)
-		return FAILURE;
-	extra = desc->extra;
-
-	/* Driver can not submit an other buffer when there is already one */
-	if (extra->read_desc.is_nonblocking)
-		return FAILURE;
-	extra->read_desc.is_nonblocking = true;
-
-	to_read = min(bytes_number, MAX_BYTES);
-	extra->read_desc.pending = bytes_number - to_read;
-	extra->read_desc.buff = data + to_read;
-	/* The following submits until bytes_number are don in the interrupt. */
-	adi_uart_SubmitRxBuffer(
-		(ADI_UART_HANDLE const)extra->uart_handler,
-		(void *const)data,
-		(uint32_t const)to_read,
-		to_read > 4 ? true : false);
-
-	return SUCCESS;
-}
-
-/**
- * @brief Submit writting buffer to the UART driver.
+ * @param [out] descriptor - User UART device structure descriptor.
+ * @param [in]  init_param - Initilaization parameters.
  *
- * Data from the buffer is sent over the UART, the function returns immediately.
- * @param desc:	Descriptor of the UART device
- * @param data:	Buffer where data will be written
- * @param bytes_number:	Number of bytes to be written.
- * @return \ref SUCCESS in case of success, \ref FAILURE otherwise.
+ * @return 0 in case of success, negative error code otherwise.
  */
-int32_t uart_write_nonblocking(struct uart_desc *desc, const uint8_t *data,
-			       uint32_t bytes_number)
+int32_t usr_uart_init(struct uart_desc **descriptor,
+		      struct uart_init_param *init_param)
 {
-	struct aducm_uart_desc	*extra;
-	uint32_t		to_write;
+	/* Variable for storing the return code from UART device */
+	int32_t  ret;
+	uint8_t bits_nr;
+	struct uart_desc *desc;
 
-	if (!desc || !data || !bytes_number)
-		return FAILURE;
-	extra = desc->extra;
-
-	/* Driver can not submit an other buffer when there is already one */
-	if (extra->write_desc.is_nonblocking)
-		return FAILURE;
-	extra->write_desc.is_nonblocking = true;
-
-	to_write = min(bytes_number, MAX_BYTES);
-	extra->write_desc.pending = bytes_number - to_write;
-	extra->write_desc.buff = (uint8_t *)data + to_write;
-	/* The following submits until bytes_number are don in the interrupt. */
-	adi_uart_SubmitTxBuffer(
-		(ADI_UART_HANDLE const)extra->uart_handler,
-		(void *const)data,
-		(uint32_t const)to_write,
-		to_write > 4 ? true : false);
-
-	return SUCCESS;
-}
-
-/**
- * @brief Initialize the UART communication peripheral.
- *
- * To configure the UART, the user must set the extra parameter from param with
- * a pointer to the configured platform specific structure
- * \ref aducm_uart_init_param .\n
- * @param desc:  Descriptor of the UART device used in the call of the drivers
- * functions
- * @param param: Descriptor used to configure the UART device
- * @return \ref SUCCESS in case of success, \ref FAILURE otherwise.
- */
-int32_t uart_init(struct uart_desc **desc, struct uart_init_param *param)
-{
-	ADI_UART_RESULT			uart_ret;
-	struct aducm_uart_desc		*aducm_desc;
-	struct aducm_uart_init_param	*aducm_init_param;
-
-	if (!desc || !param || !(param->extra) ||
-	    param->device_id >= NUM_UART_DEVICES || //
-	    initialized[param->device_id] != 0) //Already initialized
-		return FAILURE;
-
-	initialized[param->device_id] = 1;
-	*desc = alloc_desc_mem();
-	if (!(*desc))
-		return FAILURE;
-	aducm_desc = (*desc)->extra;
-	aducm_init_param = param->extra;
-
-	(*desc)->baud_rate = param->baud_rate;
-	(*desc)->device_id = param->device_id;
-	/* aducm_desc->read_desc and aducm_desc->write_desc are 0 already */
-
-	uart_ret = adi_uart_Open(param->device_id, ADI_UART_DIR_BIDIRECTION,
-				 aducm_desc->adi_uart_buffer,
-				 ADI_UART_BIDIR_MEMORY_SIZE,
-				 &aducm_desc->uart_handler);
-	if (uart_ret != ADI_UART_SUCCESS)
-		goto failure;
-
-	/* Think about the option of implementing default configuration */
-	uart_ret = adi_uart_SetConfiguration(aducm_desc->uart_handler,
-					     aducm_init_param->parity,
-					     aducm_init_param->stop_bits,
-					     aducm_init_param->word_length);
-	if (uart_ret != ADI_UART_SUCCESS)
-		goto failure;
-
-	/* Configure baud rate */
-	uint32_t i, freq;
-	for (i = 0; i < BAUDS_NB; i++)
-		if (baud_rates_26MHz[i].baud_rate == param->baud_rate)
-			break;
-	adi_pwr_GetClockFrequency(ADI_CLOCK_PCLK, &freq);
-	if (i == BAUDS_NB || freq != CLK_FREQ)
-		goto failure;
-	uart_ret = adi_uart_ConfigBaudRate(aducm_desc->uart_handler,
-					   baud_rates_26MHz[i].div_c,
-					   baud_rates_26MHz[i].div_m,
-					   baud_rates_26MHz[i].div_n,
-					   baud_rates_26MHz[i].osr);
-	if (uart_ret != ADI_UART_SUCCESS)
-		goto failure;
-
-	adi_uart_RegisterCallback(aducm_desc->uart_handler, uart_callback,
-				  *desc);
-
-	return SUCCESS;
-failure:
-	free_desc_mem(*desc);
-	*desc = NULL;
-	return FAILURE;
-}
-
-/**
- * @brief Free the resources allocated by \ref uart_init()
- * @param desc: Descriptor of the UART device
- * @return \ref SUCCESS in case of success, \ref FAILURE otherwise.
- */
-int32_t uart_remove(struct uart_desc *desc)
-{
-	struct aducm_uart_desc *aducm_desc;
-
-	if (desc == NULL || desc->extra == NULL)
-		return FAILURE;
-
-	initialized[desc->device_id] = 0;
-
-	aducm_desc = desc->extra;
-	adi_uart_Close(aducm_desc->uart_handler);
-	free_desc_mem(desc);
-
-	return SUCCESS;
-}
-
-/**
- * @brief Free the resources allocated by \ref uart_init()
- * @param desc: Descriptor of the UART device
- * @return \ref SUCCESS in case of success, \ref FAILURE otherwise.
- */
-uint32_t uart_get_errors(struct uart_desc *desc)
-{
-	struct aducm_uart_desc *extra;
-
+	desc = calloc(1, sizeof *desc);
 	if (!desc)
 		return FAILURE;
-	extra = desc->extra;
-	uint32_t ret = extra->errors;
-	extra->errors = 0;
+
+	desc->baudrate = init_param->baudrate;
+	desc->bits_no = init_param->bits_no;
+	desc->has_callback = init_param->has_callback;
+
+	/* Values for the baudrate generation registers when the baudrate is one of
+	 * the standard values and clock is 26MHz */
+	const uint8_t baudrate_osr_26mhz[] = {3, 3, 3, 3, 3, 3, 3, 2, 2, 2};
+	const uint8_t baudrate_divc_26mhz[] = {24, 12, 8, 4, 4, 2, 1, 1, 1, 1};
+	const uint8_t baudrate_divm_26mhz[] = {3, 3, 2, 3, 1, 1, 1, 1, 1, 1};
+	const uint16_t baudrate_divn_26mhz[] = {
+		1078, 1078, 1321, 1078, 1563, 1563, 1563, 1563, 1280, 171
+	};
+
+	/* Get bits number */
+	switch(desc->bits_no) {
+	case 5:
+		bits_nr = ADI_UART_WORDLEN_5BITS;
+		break;
+	case 6:
+		bits_nr = ADI_UART_WORDLEN_6BITS;
+		break;
+	case 7:
+		bits_nr = ADI_UART_WORDLEN_7BITS;
+		break;
+	case 8:
+		bits_nr = ADI_UART_WORDLEN_8BITS;
+		break;
+	default:
+		bits_nr = ADI_UART_WORDLEN_8BITS;
+	}
+
+	/* Open the UART device.Data transfer is bidirectional with NORMAL mode by
+	 * default. */
+	ret = adi_uart_Open(UART_DEVICE_NUM, ADI_UART_DIR_BIDIRECTION,
+			    uart_device_mem, ADI_UART_BIDIR_MEMORY_SIZE, &h_uart_device);
+	if(ret != ADI_UART_SUCCESS)
+		goto error;
+
+	/* Configure  UART device with NO-PARITY, ONE STOP BIT and 8bit word
+	 * length. */
+	ret = adi_uart_SetConfiguration(h_uart_device, ADI_UART_NO_PARITY,
+					ADI_UART_ONE_STOPBIT, bits_nr);
+	if(ret != ADI_UART_SUCCESS)
+		goto error;
+
+	ret = adi_uart_ConfigBaudRate(h_uart_device,
+				      baudrate_divc_26mhz[desc->baudrate],
+				      baudrate_divm_26mhz[desc->baudrate],
+				      baudrate_divn_26mhz[desc->baudrate],
+				      baudrate_osr_26mhz[desc->baudrate]);
+	if(ret != ADI_UART_SUCCESS)
+		goto error;
+
+	if(desc->has_callback) {
+		/* Register callback */
+		ret = adi_uart_RegisterCallback(h_uart_device, uart_callback, NULL);
+		if(ret != ADI_UART_SUCCESS)
+			goto error;
+	}
+
+	/* Submit buffer for read */
+	if (uart_ping_flag == 0) {
+		ret = adi_uart_SubmitRxBuffer((ADI_UART_HANDLE const)h_uart_device,
+					      (void *)ping_ptr, 1, DMA_NOT_USE);
+		if(ret != ADI_UART_SUCCESS)
+			goto error;
+		uart_ping_flag = 1;
+	}
+	if (uart_pong_flag == 0) {
+		ret = adi_uart_SubmitRxBuffer((ADI_UART_HANDLE const)h_uart_device,
+					      (void *)pong_ptr, 1, DMA_NOT_USE);
+		if(ret != ADI_UART_SUCCESS)
+			goto error;
+		uart_pong_flag = 1;
+	}
+
+	*descriptor = desc;
+
+	return ret;
+error:
+	free(desc);
 
 	return ret;
 }
 
+/**
+ * Close UART communication and free memory from UART descriptor.
+ *
+ * @param [in] desc - User UART device structure descriptor.
+ *
+ * @return 0 in case of success, negative error code otherwise.
+ */
+int32_t usr_uart_remove(struct uart_desc *desc)
+{
+	if(!desc)
+		return -1;
+
+	return adi_uart_Close(h_uart_device);
+}
+
+/**
+ * Write a character trought UART in a blocking call.
+ *
+ * usr_uart_write_char() helper function. The blocking call differs depending
+ * on the existence of a callback function.
+ *
+ * @param [in] desc - User UART device structure descriptor.
+ * @param [in] data - Data to be transmitted.
+ *
+ * @return 0 in case of success, negative error code otherwise.
+ */
+static int32_t usr_uart_write_block(struct uart_desc *desc, uint8_t data)
+{
+	int32_t ret;
+	const uint32_t buf_size = 1;
+	uint32_t hw_error;
+
+	if(desc->has_callback) {
+		ret = adi_uart_SubmitTxBuffer((ADI_UART_HANDLE const)h_uart_device,
+					      &data, buf_size, DMA_NOT_USE);
+		if(ret != ADI_UART_SUCCESS)
+			return ret;
+		tx_done++;
+		while(tx_done > 0);
+		if(tx_done == 0)
+			return 0;
+		else
+			return -1;
+	} else {
+		return adi_uart_Write((ADI_UART_HANDLE const)h_uart_device, &data,
+				      buf_size, DMA_NOT_USE, &hw_error);
+	}
+}
+
+/**
+ * Transmit a character through UART.
+ *
+ * @param [in] desc - User UART device structure descriptor.
+ * @param [in] data - Data to be transmitted.
+ * @param [in] mode - Mode of transmission (blocking or non-blocking)
+ *
+ * @return 0 in case of success, negative error code otherwise.
+ */
+int32_t usr_uart_write_char(struct uart_desc *desc, uint8_t data,
+			    enum uart_comm_mode mode)
+{
+	int32_t ret;
+	bool tx_available;
+	const uint32_t buf_size = 1;
+
+	switch(mode) {
+	case UART_BLOCKING:
+		ret = usr_uart_write_block(desc, data);
+		break;
+	case UART_NON_BLOCKING:
+		ret = adi_uart_IsTxBufferAvailable((ADI_UART_HANDLE const)h_uart_device,
+						   (bool* const)&tx_available);
+		if(ret != ADI_UART_SUCCESS)
+			return ret;
+		if (!tx_available)
+			return ret;
+		/* Start transmission */
+		ret = adi_uart_SubmitTxBuffer((ADI_UART_HANDLE const)h_uart_device,
+					      &data, buf_size, DMA_NOT_USE);
+		break;
+	default:
+		ret = -1;
+		break;
+	}
+
+	return ret;
+}
+
+/**
+ * Transmit an array of characters through UART.
+ *
+ * @param [in] desc   - User UART device structure descriptor.
+ * @param [in] string - Pointer to the data array to be transmitted.
+ *
+ * @return 0 in case of success, negative error code otherwise.
+ */
+int32_t usr_uart_write_string(struct uart_desc *desc, uint8_t *string)
+{
+	int32_t ret = 0;
+
+	while(*string != '\0') {
+		ret = usr_uart_write_char(desc, *string++, UART_BLOCKING);
+
+		if(ret < 0)
+			break;
+	}
+
+	return ret;
+}
+
+/**
+ * Read a character through UART in a blocking call.
+ *
+ * usr_uart_read_char() helper function. Takes in consideration if the
+ * application submits an UART callback or not.
+ *
+ * @param [in]  desc - User UART device structure descriptor.
+ * @param [out] data - Pointer to data container.
+ *
+ * @return 0 in case of success, negative error code otherwise.
+ */
+static int32_t usr_uart_read_block(struct uart_desc *desc, uint8_t *data)
+{
+	const uint32_t buf_size = 1;
+	uint32_t error;
+
+	if(!desc->has_callback) {
+		if(uart_ping_flag == 0 && uart_pong_flag == 0)
+			adi_uart_SubmitRxBuffer((ADI_UART_HANDLE const)h_uart_device,
+						data, buf_size, DMA_NOT_USE);
+
+		return adi_uart_GetRxBuffer((ADI_UART_HANDLE const)h_uart_device,
+					    (void **)&data, &error);
+	} else {
+		while(uart_ping_flag != 2 && uart_pong_flag != 2);
+		if(uart_ping_flag == 2) {
+			*data = *ping_ptr;
+			uart_ping_flag = 0;
+		}
+		if(uart_pong_flag == 2) {
+			*data = *pong_ptr;
+			uart_pong_flag = 0;
+		}
+
+		return 0;
+	}
+}
+
+/**
+ * Read a character through UART.
+ *
+ * @param [in]  desc - User UART device structure descriptor.
+ * @param [out] data - Pointer to data container.
+ * @param [out] rdy  - 1 if there is new data, 0 otherwise.
+ *
+ * @return 0 in case of success, negative error code otherwise.
+ */
+static int32_t usr_uart_read_nonblock(struct uart_desc *desc, uint8_t *data,
+				      uint8_t *rdy)
+{
+	uint32_t error;
+	bool rx_done;
+	int32_t ret;
+
+	if(!desc->has_callback) {
+		ret = adi_uart_IsRxBufferAvailable((ADI_UART_HANDLE const)h_uart_device,
+						   &rx_done);
+		if(ret != ADI_UART_SUCCESS)
+			return ret;
+		if(!rx_done)
+			return 0;
+		*rdy = 1;
+
+		return adi_uart_GetRxBuffer((ADI_UART_HANDLE const)h_uart_device,
+					    (void **)&data, &error);
+	} else {
+		if(uart_ping_flag == 2) {
+			*data = *ping_ptr;
+			*rdy = 1;
+			uart_ping_flag = 0;
+		}
+		if(uart_pong_flag == 2) {
+			*data = *pong_ptr;
+			*rdy = 1;
+			uart_pong_flag = 0;
+		}
+
+		return 0;
+	}
+}
+
+/**
+ * Read a character through UART.
+ *
+ * @param [in]  desc - User UART device structure descriptor.
+ * @param [out] data - Pointer to data container.
+ * @param [out] rdy  - 1 if there is new data, 0 otherwise.
+ * @param [in]  mode - Determines if BLOCKING or NON-BLOCKING.
+ *
+ * @return 0 in case of success, negative error code otherwise.
+ */
+int32_t usr_uart_read_char(struct uart_desc *desc, uint8_t *data, uint8_t *rdy,
+			   enum uart_comm_mode mode)
+{
+	int32_t ret;
+
+	*rdy = 0;
+
+	switch(mode) {
+	case UART_BLOCKING:
+		ret = usr_uart_read_block(desc, data);
+		*rdy = 1;
+		break;
+	case UART_NON_BLOCKING:
+		ret = usr_uart_read_nonblock(desc, data, rdy);
+		break;
+	default:
+		ret = -1;
+		break;
+	}
+
+	return ret;
+}

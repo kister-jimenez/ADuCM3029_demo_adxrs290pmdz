@@ -48,11 +48,6 @@
 			<locationURI>$%7Bcmsis_pack_root%7D/AnalogDevices/ADuCM302x_DFP/3.2.0/Source/drivers/pwr/adi_pwr.c</locationURI>
 		</link>
 		<link>
-			<name>RTE/Device/ADuCM3029/adi_rtc.c</name>
-			<type>1</type>
-			<locationURI>$%7Bcmsis_pack_root%7D/AnalogDevices/ADuCM302x_DFP/3.2.0/Source/drivers/rtc/adi_rtc.c</locationURI>
-		</link>
-		<link>
 			<name>RTE/Device/ADuCM3029/adi_spi.c</name>
 			<type>1</type>
 			<locationURI>$%7Bcmsis_pack_root%7D/AnalogDevices/ADuCM302x_DFP/3.2.0/Source/drivers/spi/adi_spi.c</locationURI>
@@ -66,11 +61,6 @@
 			<name>RTE/Device/ADuCM3029/adi_uart.c</name>
 			<type>1</type>
 			<locationURI>$%7Bcmsis_pack_root%7D/AnalogDevices/ADuCM302x_DFP/3.2.0/Source/drivers/uart/adi_uart.c</locationURI>
-		</link>
-		<link>
-			<name>RTE/Device/ADuCM3029/adi_wdt.c</name>
-			<type>1</type>
-			<locationURI>$%7Bcmsis_pack_root%7D/AnalogDevices/ADuCM302x_DFP/3.2.0/Source/drivers/wdt/adi_wdt.c</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

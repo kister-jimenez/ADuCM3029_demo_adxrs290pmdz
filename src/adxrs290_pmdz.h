@@ -1,13 +1,9 @@
-/**
-******************************************************************************
-*   @file     Timer.h
-*   @brief    Header file for the Timer part.
-*   @version  V0.1
-*   @author   ADI
-*   @date     January 2017
-*
-*******************************************************************************
-* Copyright 2017(c) Analog Devices, Inc.
+/***************************************************************************//**
+*   @file   adxrs290_pmdz.h
+*   @brief  Application header.
+*   @author Kister Genesis Jimenez (kister.jimenez@analog.com)
+********************************************************************************
+* Copyright 2019(c) Analog Devices, Inc.
 *
 * All rights reserved.
 *
@@ -41,60 +37,67 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#ifndef TIMER_H_
-#define TIMER_H_
+#ifndef ADXRS290_PMDZ_H_
+#define ADXRS290_PMDZ_H_
 
 /******************************************************************************/
 /***************************** Include Files **********************************/
 /******************************************************************************/
 
-#include <stdint.h>
-#include <stdbool.h>
+#include "adxrs290.h"
+#include "cli.h"
 
 /******************************************************************************/
 /********************** Macros and Constants Definitions **********************/
 /******************************************************************************/
 
-#define TIMER_MAX_SW_PERSACLE 32
+#define HELP_SHORT_COMMAND true
+#define HELP_LONG_COMMAND false
 
 /******************************************************************************/
 /*************************** Types Declarations *******************************/
 /******************************************************************************/
 
-struct timer_counter_init {
-	float f_update; /* Update timer frequency */
-	uint8_t update_timer; /* Update timer ID */
-	void *callback_func_ptr; /* Pointer to the callback */
-	void *callback_param; /* Pointer to the application passed CB parameter */
+struct adxrs290_pmdz_init_param {
+	struct adxrs290_init_param adxrs290_init;
+	struct cli_init_param cli_init;
 };
 
-struct timer_counter_desc {
-	float f_update; /* Update timer frequency */
-	uint8_t sw_prescaler; /* Update timer software prescaler compare value */
-	uint8_t update_timer; /* Update timer ID */
+struct adxrs290_pmdz_dev {
+	struct adxrs290_dev *adxrs290_device;
+	struct cli_desc *cli_device;
 };
 
 /******************************************************************************/
 /************************ Functions Declarations ******************************/
 /******************************************************************************/
 
-/* Power and delay timers initialization function. */
-int32_t timer_start(void);
+/* Display help options in the CLI. */
+int32_t adxrs290_pmdz_help(struct adxrs290_pmdz_dev *dev, uint8_t *arg);
 
-/* Delay function of 1ms or more. */
-void timer_sleep(uint32_t ticks);
+/* Set low-pass filter pole routine. */
+int32_t adxrs290_pmdz_set_lpf(struct adxrs290_pmdz_dev *dev, uint8_t *arg);
 
-/* Initializes a timer with a callback. */
-int32_t timer_counter_setup(struct timer_counter_desc **device,
-			    struct timer_counter_init *init_param);
+/* Set high-pass filter pole routine. */
+int32_t adxrs290_pmdz_set_hpf(struct adxrs290_pmdz_dev *dev, uint8_t *arg);
 
-/* Stop timer and free the resources allocated by timer_counter_setup(). */
-int32_t timer_counter_remove(struct timer_counter_desc *dev);
+/* Read  angular rate data. */
+int32_t adxrs290_pmdz_read_data(struct adxrs290_pmdz_dev *dev, uint8_t *arg);
 
-/* Activate/deactivate timer. */
-int32_t timer_counter_activate(struct timer_counter_desc *dev, bool enable);
+/* Production test routine. */
+int32_t adxrs290_pmdz_prod_test(struct adxrs290_pmdz_dev *dev, uint8_t *arg);
 
-/* Change the rate of the timer. */
-int32_t timer_counter_set_rate(struct timer_counter_desc *dev, float new_rate);
+/* Provide default configuration for the application initialization handler. */
+void adxrs290_pmdz_get_config(struct adxrs290_pmdz_init_param *init_param);
 
-#endif /* TIMER_H_ */
+/* Application main process. */
+int32_t adxrs290_pmdz_process(struct adxrs290_pmdz_dev *dev);
+
+/* Allocate memory for the application handlers and initialize the system. */
+int32_t adxrs290_pmdz_setup(struct adxrs290_pmdz_dev **device,
+			   struct adxrs290_pmdz_init_param *init_param);
+
+/* Free memory allocated by adxrs290_pmdz_setup(). */
+int32_t adxrs290_pmdz_remove(struct adxrs290_pmdz_dev *dev);
+
+#endif /* ADXRS290_PMDZ_H_ */

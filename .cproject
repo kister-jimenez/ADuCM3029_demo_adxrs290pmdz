@@ -15,7 +15,7 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" cleanCommand="clean" description="" errorParsers="com.analog.crosscore.core.CCESARMErrorParser" id="arm.toolchain.gcc.target.exe.debug.778433999" name="Debug" parent="arm.toolchain.gcc.target.exe.debug">
+				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" cleanCommand="clean" description="" errorParsers="com.analog.crosscore.core.CCESARMErrorParser" id="arm.toolchain.gcc.target.exe.debug.778433999" name="Debug" parent="arm.toolchain.gcc.target.exe.debug" postbuildStep="arm-none-eabi-objcopy -O ihex ${ProjName} ${ProjName}.hex">
 					<folderInfo id="arm.toolchain.gcc.target.exe.debug.778433999." name="/" resourcePath="">
 						<toolChain id="arm.gcc.toolchain.exe.debug.694500127" name="CrossCore GCC ARM Embedded Toolchain" superClass="arm.gcc.toolchain" targetTool="arm.toolchain.gcc.c.linker">
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="arm.toolchain.platform.base.1606038022" name="Development Platform" osList="all" superClass="arm.toolchain.platform.base"/>
@@ -39,11 +39,9 @@
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/dma&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/gpio&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/pwr&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/rtc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/spi&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/tmr&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/uart&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/wdt&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE/Device/ADuCM3029&quot;"/>
 								</option>
@@ -67,17 +65,14 @@
 								<option id="arm.base.compiler.option.include.paths.681905217" name="Additional include directories (-I):" superClass="arm.base.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/system}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/platform_include}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/src/platform_source}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/ARM/CMSIS/5.6.0/CMSIS/Core/Include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/dma&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/gpio&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/pwr&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/rtc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/spi&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/tmr&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/uart&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/wdt&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE/Device/ADuCM3029&quot;"/>
 								</option>
@@ -100,15 +95,14 @@
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/dma&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/gpio&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/pwr&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/rtc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/spi&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/tmr&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/uart&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/wdt&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE/Device/ADuCM3029&quot;"/>
 								</option>
 								<option id="arm.toolchain.gcc.c.linker.option.fpu.abi.2042624967" name="Float ABI" superClass="arm.toolchain.gcc.c.linker.option.fpu.abi" useByScannerDiscovery="false" value="" valueType="enumerated"/>
+								<option id="arm.linker.option.ldprocessing.ldfile.75170268" name="Custom linker script (-T)" superClass="arm.linker.option.ldprocessing.ldfile" value="${workspace_loc:/${ProjName}}/RTE/Device/ADuCM3029/ADuCM3029.ld" valueType="string"/>
 								<inputType id="arm.linker.input.1472399113" superClass="arm.linker.input">
 									<additionalInput kind="additionaldependency" paths="$(USER_OBJS)"/>
 								</inputType>
@@ -133,11 +127,9 @@
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/dma&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/gpio&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/pwr&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/rtc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/spi&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/tmr&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/uart&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/wdt&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE/Device/ADuCM3029&quot;"/>
 								</option>
@@ -158,15 +150,14 @@
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/dma&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/gpio&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/pwr&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/rtc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/spi&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/tmr&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/uart&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/wdt&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE/Device/ADuCM3029&quot;"/>
 								</option>
 								<option id="arm.toolchain.gcc.cpp.linker.option.fpu.abi.1657037447" name="Float ABI" superClass="arm.toolchain.gcc.cpp.linker.option.fpu.abi" value="" valueType="enumerated"/>
+								<option id="arm.linker.option.ldprocessing.ldfile.472431826" name="Custom linker script (-T)" superClass="arm.linker.option.ldprocessing.ldfile" value="${workspace_loc:/${ProjName}}/RTE/Device/ADuCM3029/ADuCM3029.ld" valueType="string"/>
 							</tool>
 							<tool id="arm.toolchain.gcc.archiver.737779413" name="CrossCore GCC ARM Embedded Archiver" superClass="arm.toolchain.gcc.archiver"/>
 							<tool id="arm.loader.385792000" name="ARM Loader Base" superClass="arm.loader">
@@ -196,7 +187,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="system|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="RTE/Device/ADuCM3029/adi_wdt_config.h|RTE/Device/ADuCM3029/adi_rtc_config.h|system|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="system"/>
 					</sourceEntries>
@@ -242,11 +233,9 @@
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/dma&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/gpio&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/pwr&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/rtc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/spi&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/tmr&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/uart&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/wdt&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE/Device/ADuCM3029&quot;"/>
 								</option>
@@ -276,11 +265,9 @@
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/dma&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/gpio&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/pwr&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/rtc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/spi&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/tmr&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/uart&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/wdt&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE/Device/ADuCM3029&quot;"/>
 								</option>
@@ -303,15 +290,14 @@
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/dma&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/gpio&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/pwr&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/rtc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/spi&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/tmr&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/uart&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/wdt&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE/Device/ADuCM3029&quot;"/>
 								</option>
 								<option id="arm.toolchain.gcc.c.linker.option.fpu.abi.394744644" name="Float ABI" superClass="arm.toolchain.gcc.c.linker.option.fpu.abi" value="" valueType="enumerated"/>
+								<option id="arm.linker.option.ldprocessing.ldfile.933810791" name="Custom linker script (-T)" superClass="arm.linker.option.ldprocessing.ldfile" value="${workspace_loc:/${ProjName}}/RTE/Device/ADuCM3029/ADuCM3029.ld" valueType="string"/>
 								<inputType id="arm.linker.input.1628130972" superClass="arm.linker.input">
 									<additionalInput kind="additionaldependency" paths="$(USER_OBJS)"/>
 								</inputType>
@@ -336,11 +322,9 @@
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/dma&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/gpio&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/pwr&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/rtc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/spi&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/tmr&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/uart&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/wdt&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE/Device/ADuCM3029&quot;"/>
 								</option>
@@ -361,15 +345,14 @@
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/dma&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/gpio&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/pwr&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/rtc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/spi&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/tmr&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/uart&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${cmsis_pack_root}/AnalogDevices/ADuCM302x_DFP/3.2.0/Include/drivers/wdt&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}}/RTE/Device/ADuCM3029&quot;"/>
 								</option>
 								<option id="arm.toolchain.gcc.cpp.linker.option.fpu.abi.110768012" name="Float ABI" superClass="arm.toolchain.gcc.cpp.linker.option.fpu.abi" value="" valueType="enumerated"/>
+								<option id="arm.linker.option.ldprocessing.ldfile.581578872" name="Custom linker script (-T)" superClass="arm.linker.option.ldprocessing.ldfile" value="${workspace_loc:/${ProjName}}/RTE/Device/ADuCM3029/ADuCM3029.ld" valueType="string"/>
 							</tool>
 							<tool id="arm.toolchain.gcc.archiver.361058114" name="CrossCore GCC ARM Embedded Archiver" superClass="arm.toolchain.gcc.archiver"/>
 							<tool id="arm.loader.848836341" name="ARM Loader Base" superClass="arm.loader">
@@ -399,7 +382,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="system|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="RTE/Device/ADuCM3029/adi_wdt_config.h|RTE/Device/ADuCM3029/adi_rtc_config.h|system|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="system"/>
 					</sourceEntries>
@@ -432,8 +415,12 @@
 			<file name="RTE/Device/ADuCM3029/adi_wdt_config.h" version="3.2.0"/>
 			<file name="RTE/Device/ADuCM3029/adi_uart_config.h" version="3.2.0"/>
 			<file name="RTE/Device/ADuCM3029/adi_cycle_counting_config.h" version="3.2.0"/>
+			<file name="RTE/Device/ADuCM3029/reset_ADuCM3029.S" version="3.2.0"/>
 			<file name="RTE/Device/ADuCM3029/adi_tmr_config.h" version="3.2.0"/>
 			<file name="RTE/Device/ADuCM3029/adi_global_config.h" version="3.2.0"/>
+			<file name="RTE/Device/ADuCM3029/ADuCM3029.ld" version="3.2.0"/>
+			<file name="RTE/Device/ADuCM3029/startup_ADuCM3029.c" version="3.2.0"/>
+			<file name="RTE/Device/ADuCM3029/system_ADuCM3029.c" version="3.2.0"/>
 		</files>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
@@ -446,4 +433,5 @@
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 	</storageModule>
+	<storageModule moduleId="refreshScope"/>
 </cproject>

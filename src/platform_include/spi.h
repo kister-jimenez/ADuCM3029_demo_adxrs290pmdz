@@ -1,6 +1,5 @@
 /***************************************************************************//**
  *   @file   spi.h
- *   @brief  Header file of SPI Interface
  *   @author DBogdan (dragos.bogdan@analog.com)
 ********************************************************************************
  * Copyright 2019(c) Analog Devices, Inc.
@@ -57,73 +56,40 @@
 /*************************** Types Declarations *******************************/
 /******************************************************************************/
 
-/**
- * @enum spi_mode
- * @brief SPI configuration for clock phase and polarity.
- */
+typedef enum spi_type {
+	ADICUP3029_SPI
+} spi_type;
+
+typedef enum en_spi_channel {
+	SPI_ARDUINO,	/* SPI0 - used for ARDUINO connector on ADICUP3029 board */
+	SPI_PMOD,	/* SPI1 - used for PMOD connector on ADICUP3029 board */
+	SPI_BLE		/* SPI2 - used to send BLE commands to EM9304 */
+} en_spi_channel;
+
 typedef enum spi_mode {
-	/** Data on rising, shift out on falling */
 	SPI_MODE_0 = (0 | 0),
-	/** Data on falling, shift out on rising */
 	SPI_MODE_1 = (0 | SPI_CPHA),
-	/** Data on falling, shift out on rising */
 	SPI_MODE_2 = (SPI_CPOL | 0),
-	/** Data on rising, shift out on falling */
 	SPI_MODE_3 = (SPI_CPOL | SPI_CPHA)
 } spi_mode;
 
-/**
- * @struct spi_platform_ops
- * @brief Structure holding SPI function pointers that point to the platform
- * specific function
- */
-struct spi_platform_ops ;
-
-/**
- * @struct spi_init_param
- * @brief Structure holding the parameters for SPI initialization
- */
 typedef struct spi_init_param {
-	/** maximum transfer speed */
 	uint32_t	max_speed_hz;
-	/** SPI chip select */
 	uint8_t		chip_select;
-	/** SPI mode */
 	enum spi_mode	mode;
-	const struct spi_platform_ops *platform_ops;
-	/**  SPI extra parameters (device specific) */
+	enum spi_type type;
+	uint32_t	  id;
 	void		*extra;
 } spi_init_param;
 
-/**
- * @struct spi_desc
- * @brief Structure holding SPI descriptor.
- */
 typedef struct spi_desc {
-	/** maximum transfer speed */
 	uint32_t	max_speed_hz;
-	/** SPI chip select */
 	uint8_t		chip_select;
-	/** SPI mode */
 	enum spi_mode	mode;
-	const struct spi_platform_ops *platform_ops;
-	/**  SPI extra parameters (device specific) */
+	enum spi_type type;
+	uint32_t	  id;
 	void		*extra;
 } spi_desc;
-
-/**
- * @struct spi_platform_ops
- * @brief Structure holding SPI function pointers that point to the platform
- * specific function
- */
-struct spi_platform_ops {
-	/** SPI initialization function pointer */
-	int32_t (*spi_ops_init)(struct spi_desc **, const struct spi_init_param *);
-	/** SPI write/read function pointer */
-	int32_t (*spi_ops_write_and_read)(struct spi_desc *, uint8_t *, uint16_t);
-	/** SPI remove function pointer */
-	int32_t (*spi_ops_remove)(struct spi_desc *);
-};
 
 /******************************************************************************/
 /************************ Functions Declarations ******************************/
@@ -139,6 +105,6 @@ int32_t spi_remove(struct spi_desc *desc);
 /* Write and read data to/from SPI. */
 int32_t spi_write_and_read(struct spi_desc *desc,
 			   uint8_t *data,
-			   uint16_t bytes_number);
+			   uint8_t bytes_number);
 
 #endif // SPI_H_

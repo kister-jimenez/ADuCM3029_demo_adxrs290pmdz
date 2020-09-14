@@ -1,7 +1,6 @@
 /***************************************************************************//**
  *   @file   uart.h
- *   @brief  Header file of UART interface.
- *   @author Cristian Pop (cristian.pop@analog.com)
+ *   @author Andrei Drimbarean (Andrei.Drimbarean@analog.com)
 ********************************************************************************
  * Copyright 2019(c) Analog Devices, Inc.
  *
@@ -36,76 +35,90 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
-#ifndef UART_H_
-#define UART_H_
+
+#ifndef PLATFORM_INCLUDE_UART_H_
+#define PLATFORM_INCLUDE_UART_H_
 
 /******************************************************************************/
 /***************************** Include Files **********************************/
 /******************************************************************************/
 
 #include <stdint.h>
+#include <stdbool.h>
+
+/******************************************************************************/
+/********************** Macros and Constants Definitions **********************/
+/******************************************************************************/
+
+/* UART device number */
+#define UART_DEVICE_NUM 0u
+/* Execution status */
+#define UART_SUCCESS             0
+#define UART_FAILURE            -1
+#define UART_NO_TX_SPACE        -2
+#define UART_NO_RX_SPACE        -3
+#define UART_INIT_FAILURE		-4
+/* UART status */
+#define UART_TRUE               1
+#define UART_FALSE              0
+
+#define DMA_USE		true
+#define DMA_NOT_USE false
 
 /******************************************************************************/
 /*************************** Types Declarations *******************************/
 /******************************************************************************/
 
-/**
- * @struct uart_init_param
- * @brief Structure holding the parameters for UART initialization
- */
-struct uart_init_param {
-	/** UART Device ID */
-	uint8_t	device_id;
-	/** UART Baud Rate */
-	uint32_t 	baud_rate;
-	/** UART extra parameters (device specific) */
-	void 		*extra;
-};
+typedef enum uart_baudrate {
+	bd9600,
+	bd19200,
+	bd38400,
+	bd57600,
+	bd115200,
+	bd230400,
+	bd460800,
+	bd921600,
+	bd1000000,
+	bd1500000
+} uart_baudrate;
 
-/**
- * @struct uart_desc
- * @brief Stucture holding the UART descriptor.
- */
-struct uart_desc {
-	/** UART Device ID */
-	uint8_t 	device_id;
-	/** UART Baud Rate */
-	uint32_t 	baud_rate;
-	/** Callback to be called when an operation is done (optional) */
-	void		(*callback)(void *callback_ctx, uint32_t event,
-				    void *extra);
-	/** Parameter to be passed to the callback as app_param */
-	void		*callback_ctx;
-	/** UART extra parameters (device specific) */
-	void 		*extra;
-};
+typedef enum uart_comm_mode {
+	UART_BLOCKING,    /* Data is transmitted in blocking call */
+	UART_NON_BLOCKING /* Data is transmitted in non-blocking call */
+} uart_en_write_data;
+
+typedef struct uart_init_param {
+	enum uart_baudrate baudrate;
+	uint8_t bits_no;
+	bool has_callback;
+} uart_init_param;
+
+typedef struct uart_desc {
+	enum uart_baudrate baudrate;
+	uint8_t bits_no;
+	bool has_callback;
+} uart_desc;
 
 /******************************************************************************/
 /************************ Functions Declarations ******************************/
 /******************************************************************************/
 
-/* Read data from UART. Blocking function */
-int32_t uart_read(struct uart_desc *desc, uint8_t *data, uint32_t bytes_number);
-
-/* Write data to UART. Blocking function */
-int32_t uart_write(struct uart_desc *desc, const uint8_t *data,
-		   uint32_t bytes_number);
-
-/* Read data from UART. Non blocking function */
-int32_t uart_read_nonblocking(struct uart_desc *desc, uint8_t *data,
-			      uint32_t bytes_number);
-
-/* Write data to UART. Non blocking function*/
-int32_t uart_write_nonblocking(struct uart_desc *desc, const uint8_t *data,
-			       uint32_t bytes_number);
-
 /* Initialize the UART communication peripheral. */
-int32_t uart_init(struct uart_desc **desc, struct uart_init_param *param);
+int32_t usr_uart_init(struct uart_desc **descriptor,
+		      struct uart_init_param *init_param);
 
-/* Free the resources allocated by uart_init(). */
-int32_t uart_remove(struct uart_desc *desc);
+/* Free the resources allocated by uart_init() */
+int32_t usr_uart_remove(struct uart_desc *desc);
 
-/* Check if UART errors occurred. */
-uint32_t uart_get_errors(struct uart_desc *desc);
+/* Write one character to the UART */
+int32_t usr_uart_write_char(struct uart_desc *desc, uint8_t data,
+			    enum uart_comm_mode mode);
 
-#endif /* UART_H_ */
+/* Write a string of characters to the UART */
+int32_t usr_uart_write_string(struct uart_desc *desc, uint8_t *string);
+
+/* Read one character from the UART */
+int32_t usr_uart_read_char(struct uart_desc *desc, uint8_t *data, uint8_t *rdy,
+			   enum uart_comm_mode mode);
+
+#endif /* PLATFORM_INCLUDE_UART_H_ */

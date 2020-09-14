@@ -32,14 +32,6 @@
 <file attr="config" category="header" deviceDependent="1" name="Include/config/adi_global_config.h" version="3.2.0"/>
 <file category="doc" deviceDependent="1" name="Documents/html/group___power___driver.html"/>
 </component>
-<component Cclass="Device" Cgroup="Drivers" Csub="RTC" Cvendor="AnalogDevices" Cversion="3.2.0" deviceDependent="1">
-<package name="ADuCM302x_DFP" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="3.2.0"/>
-<file category="source" deviceDependent="1" name="Source/drivers/rtc/adi_rtc.c"/>
-<file category="header" deviceDependent="1" name="Include/drivers/rtc/adi_rtc.h"/>
-<file attr="config" category="header" deviceDependent="1" name="Include/config/adi_rtc_config.h" version="3.2.0"/>
-<file attr="config" category="header" deviceDependent="1" name="Include/config/adi_global_config.h" version="3.2.0"/>
-<file category="doc" deviceDependent="1" name="Documents/html/group___r_t_c___driver.html"/>
-</component>
 <component Cclass="Device" Cgroup="Drivers" Csub="SPI" Cvendor="AnalogDevices" Cversion="3.2.0" deviceDependent="1">
 <package name="ADuCM302x_DFP" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="3.2.0"/>
 <file category="source" deviceDependent="1" name="Source/drivers/spi/adi_spi.c"/>
@@ -64,18 +56,18 @@
 <file attr="config" category="header" deviceDependent="1" name="Include/config/adi_global_config.h" version="3.2.0"/>
 <file category="doc" deviceDependent="1" name="Documents/html/group___u_a_r_t___driver.html"/>
 </component>
-<component Cclass="Device" Cgroup="Drivers" Csub="WDT" Cvendor="AnalogDevices" Cversion="3.2.0" deviceDependent="1">
-<package name="ADuCM302x_DFP" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="3.2.0"/>
-<file category="source" deviceDependent="1" name="Source/drivers/wdt/adi_wdt.c"/>
-<file category="header" deviceDependent="1" name="Include/drivers/wdt/adi_wdt.h"/>
-<file attr="config" category="header" deviceDependent="1" name="Include/config/adi_wdt_config.h" version="3.2.0"/>
-<file attr="config" category="header" deviceDependent="1" name="Include/config/adi_global_config.h" version="3.2.0"/>
-<file category="doc" deviceDependent="1" name="Documents/html/group___w_d_t___driver.html"/>
-</component>
 <component Cclass="Device" Cgroup="Global Configuration" Cvendor="AnalogDevices" Cversion="3.2.0" deviceDependent="1">
 <package name="ADuCM302x_DFP" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="3.2.0"/>
 <file attr="config" category="header" deviceDependent="1" name="Include/config/adi_cycle_counting_config.h" version="3.2.0"/>
 <file attr="config" category="header" deviceDependent="1" name="Include/config/adi_global_config.h" version="3.2.0"/>
+</component>
+<component Cclass="Device" Cgroup="Startup" Cvendor="AnalogDevices" Cversion="3.2.0" deviceDependent="1">
+<package name="ADuCM302x_DFP" url="http://download.analog.com/tools/EZBoards/CM302x/Releases/" vendor="AnalogDevices" version="3.2.0"/>
+<file category="include" deviceDependent="1" name="Include/"/>
+<file attr="config" category="source" condition="ADuCM3029_GCC" deviceDependent="1" name="Source/GCC/startup_ADuCM3029.c" version="3.2.0"/>
+<file attr="config" category="source" condition="ADuCM3029_GCC" deviceDependent="1" name="Source/GCC/reset_ADuCM3029.S" version="3.2.0"/>
+<file attr="config" category="source" condition="ADuCM3029" deviceDependent="1" name="Source/system_ADuCM3029.c" version="3.2.0"/>
+<file attr="config" category="linkerScript" condition="ADuCM3029_GCC" deviceDependent="1" name="Source/GCC/ADuCM3029.ld" version="3.2.0"/>
 </component>
 </components>
 <apis/>

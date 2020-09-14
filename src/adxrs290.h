@@ -81,14 +81,12 @@
 #define ADXRS290_MEASUREMENT					BIT(1)
 
 /* ADXRS290_Filter */
-#define ADXRS290_LPF_MASK						GENMASK(2, 0)
-#define ADXRS290_LPF(x)							field_prep(ADXRS290_LPF_MASK, x)
-#define ADXRS290_LPF_PART(x)					field_prep(ADXRS290_LPF_MASK, x)
-#define ADXRS290_HPF_MASK						GENMASK(7, 4)
-#define ADXRS290_HPF(x)							field_prep(ADXRS290_HPF_MASK, x)
-#define ADXRS290_HPF_PART(x)					field_get(ADXRS290_HPF_MASK, x)
+#define ADXRS290_LPF_MASK						0x07
+#define ADXRS290_LPF(x)							(x) & ADXRS290_LPF_MASK
+#define ADXRS290_HPF_MASK						0xF0
+#define ADXRS290_HPF(x)							((x) & ADXRS290_LPF_MASK )>4
 /* ADXRS290_DATA_READY */
-#define ADXRS290_SYNC							GENMASK(1, 0)
+#define ADXRS290_SYNC							0x03
 
 
 /******************************************************************************/
@@ -145,7 +143,6 @@ enum adxrs290_lpf {
 	ADXRS290_HPF_11HZ30
  };
 
-
 /**
  * @struct adxrs290_init_param
  * @brief Device driver initialization structure
@@ -155,6 +152,10 @@ struct adxrs290_init_param {
 	spi_init_param	spi_init;
 	/** GPIO 0 initialization */
 	struct gpio_init_param sync;
+	enum adxrs290_mode mode;
+	enum adxrs290_lpf lpf;
+	enum adxrs290_hpf hpf;
+
 };
 
 /**
@@ -180,9 +181,9 @@ int32_t adxrs290_reg_read(struct adxrs290_dev *dev, uint8_t address,
 int32_t adxrs290_reg_write(struct adxrs290_dev *dev, uint8_t address,
 			   uint8_t data);
 
-/** Do a read and write of a register to update only part of a register. */
-int32_t adxrs290_reg_write_mask(struct adxrs290_dev *dev, uint8_t address,
-				uint8_t data, uint8_t mask);
+/** Read device register multi-byte.*/
+int32_t adxrs290_reg_readN(struct adxrs290_dev *dev, uint8_t start_address,
+			  uint8_t **data, uint8_t num_regs);
 
 /** Get the low-pass filter pole location. */
 int32_t adxrs290_get_lpf(struct adxrs290_dev *dev, enum adxrs290_lpf *lpf);
@@ -206,12 +207,16 @@ int32_t adxrs290_set_op_mode(struct adxrs290_dev *dev, enum adxrs290_mode mode);
 int32_t adxrs290_get_temp_data(struct adxrs290_dev *dev, int16_t *temp);
 
 /** Read X or Y angular velocity data */
-int32_t adxrs290_get_rate_data(struct adxrs290_dev *dev, enum adxrs290_channel,
-		int16_t *rate);
+int32_t adxrs290_get_rate_data(struct adxrs290_dev *dev,
+		enum adxrs290_channel ch, int16_t *rate);
+
+/** Read both the X and Y angular rate. */
+int32_t adxrs290_get_rate_dataXY(struct adxrs290_dev *dev,
+		int16_t *rateX, int16_t *rateY);
 
 /*! Init. the comm. peripheral and checks if the ADXRS290 part is present. */
 int32_t adxrs290_init(struct adxrs290_dev **device,
-		     struct adxrs290_init_param init_param);
+		     const struct adxrs290_init_param *init_param);
 
 /*! Free the resources allocated by adxrs290_init(). */
 int32_t adxrs290_remove(struct adxrs290_dev *dev);

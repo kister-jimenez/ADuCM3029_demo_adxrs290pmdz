@@ -1,7 +1,6 @@
 /***************************************************************************//**
- *   @file   timer_extra.h
- *   @brief  Header file of TIMER driver for ADuCM302x
- *   @author Mihail Chindris (mihail.chindris@analog.com)
+ *   @file   interrupt.c
+ *   @author Andrei Drimbarean (Andrei.Drimbarean@analog.com)
 ********************************************************************************
  * Copyright 2019(c) Analog Devices, Inc.
  *
@@ -37,22 +36,67 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 *******************************************************************************/
 
-#ifndef TIMER_EXTRA_H
-#define TIMER_EXTRA_H
+/******************************************************************************/
+/***************************** Include Files **********************************/
+/******************************************************************************/
+#include "interrupt.h"
+#include "error.h"
+#include <stdlib.h>
 
 /******************************************************************************/
-/************************** Types Declarations *******************************/
+/************************ Functions Definitions *******************************/
 /******************************************************************************/
 
-/**
- * @struct aducm_timer_desc
- * @brief  It stores instance values specific for the ADuCM302x implementation
- */
-struct aducm_timer_desc {
-	/** Used to compare with the driver internal count */
-	uint64_t	old_time;
-	/** 1 if the instance is counting, 0 otherwise */
-	bool		started;
-};
+//todo: comment intr_register_callback
+int32_t intr_enable_irq(uint32_t int_id, uint8_t mode)
+{
+	return adi_xint_EnableIRQ(int_id, mode);
+}
 
-#endif /* TIMER_EXTRA_H */
+//todo: comment intr_register_callback
+int32_t intr_register_callback(uint32_t int_id, void *cb_function_pointer,
+			       void *cb_parameter)
+{
+	return adi_xint_RegisterCallback(int_id,
+					 (ADI_CALLBACK const)cb_function_pointer, cb_parameter);
+}
+
+//todo: comment intr_setup
+int32_t intr_setup(struct intr_dev **device)
+{
+	int32_t ret;
+	struct intr_dev *dev;
+
+	dev = calloc(1, sizeof *dev);
+	if(!dev)
+		return -1;
+
+	ret = adi_xint_Init(dev->mem_vector, ADI_XINT_MEMORY_SIZE);
+	if(ret != SUCCESS)
+		goto error;
+
+	*device = dev;
+
+	return ret;
+error:
+	free(dev);
+
+	return ret;
+}
+
+//todo: comment intr_remove
+int32_t intr_remove(struct intr_dev *dev)
+{
+	int32_t ret;
+
+	if(!dev)
+		return -1;
+
+	ret = adi_xint_UnInit();
+	if(ret != SUCCESS)
+		return ret;
+
+	free(dev);
+
+	return ret;
+}
