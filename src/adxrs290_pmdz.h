@@ -81,8 +81,14 @@ int32_t adxrs290_pmdz_set_lpf(struct adxrs290_pmdz_dev *dev, uint8_t *arg);
 /* Set high-pass filter pole routine. */
 int32_t adxrs290_pmdz_set_hpf(struct adxrs290_pmdz_dev *dev, uint8_t *arg);
 
-/* Read  angular rate data. */
-int32_t adxrs290_pmdz_read_data(struct adxrs290_pmdz_dev *dev, uint8_t *arg);
+/* Read X-axis angular rate data. */
+int32_t adxrs290_pmdz_read_dataX(struct adxrs290_pmdz_dev *dev, uint8_t *arg);
+
+/* Read Y-axis  angular rate data. */
+int32_t adxrs290_pmdz_read_dataY(struct adxrs290_pmdz_dev *dev, uint8_t *arg);
+
+/* Read both X and Y-axes angular rates data. */
+int32_t adxrs290_pmdz_read_dataXY(struct adxrs290_pmdz_dev *dev, uint8_t *arg);
 
 /* Production test routine. */
 int32_t adxrs290_pmdz_prod_test(struct adxrs290_pmdz_dev *dev, uint8_t *arg);

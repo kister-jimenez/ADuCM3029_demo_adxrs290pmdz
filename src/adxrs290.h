@@ -76,7 +76,6 @@
 #define ADXRS290_REG_DATA_READY					0x12
 
 /* ADXRS290_POWER_CTL */
-#define ADXRS290_READ							BIT(7)
 #define ADXRS290_TSM							BIT(0)
 #define ADXRS290_MEASUREMENT					BIT(1)
 
@@ -183,7 +182,7 @@ int32_t adxrs290_reg_write(struct adxrs290_dev *dev, uint8_t address,
 
 /** Read device register multi-byte.*/
 int32_t adxrs290_reg_readN(struct adxrs290_dev *dev, uint8_t start_address,
-			  uint8_t **data, uint8_t num_regs);
+			  uint8_t *data, uint8_t num_regs);
 
 /** Get the low-pass filter pole location. */
 int32_t adxrs290_get_lpf(struct adxrs290_dev *dev, enum adxrs290_lpf *lpf);

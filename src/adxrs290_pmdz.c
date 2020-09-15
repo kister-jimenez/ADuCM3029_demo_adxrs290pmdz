@@ -59,7 +59,9 @@ static cmd_func adxrs290_fnc_ptr[] = {
 	(cmd_func)adxrs290_pmdz_help,
 	(cmd_func)adxrs290_pmdz_set_lpf,
 	(cmd_func)adxrs290_pmdz_set_hpf,
-	(cmd_func)adxrs290_pmdz_read_data,
+	(cmd_func)adxrs290_pmdz_read_dataX,
+	(cmd_func)adxrs290_pmdz_read_dataY,
+	(cmd_func)adxrs290_pmdz_read_dataXY,
 	(cmd_func)adxrs290_pmdz_prod_test,
 	NULL
 };
@@ -72,8 +74,12 @@ static char *adxrs290_fnc_calls[] = {
 	"sl ",
 	"set_hpf ",
 	"sh ",
-	"read_rate ",
-	"r ",
+	"axis_x",
+	"x",
+	"axis_y",
+	"y",
+	"axis_xy",
+	"a",
 	"prod_test",
 	"t",
 	""
@@ -81,7 +87,7 @@ static char *adxrs290_fnc_calls[] = {
 
 /* Command size vector */
 static uint8_t adxrs290_fnc_call_size[] = {
-	5, 2, 8, 3, 8, 3, 10, 2, 10, 2, 1
+	5, 2, 8, 3, 8, 3, 7, 2, 7, 2, 7, 2, 10, 2, 1
 };
 
 /******************************************************************************/
@@ -143,179 +149,234 @@ static int32_t adxrs290_pmdz_help_gyro(struct adxrs290_pmdz_dev *dev,
 	if (!short_command) {
 		ret = usr_uart_write_string(dev->cli_device->uart_device,
 					(uint8_t*)
-					" set_lpf <loc>                                   - Set the low-pass filter pole.\n");
+					" set_lpf <loc>          - Set the low-pass filter pole.\n");
 	}
 	else
 	{
 		ret = usr_uart_write_string(dev->cli_device->uart_device,
 					(uint8_t*)
-					" sl <loc>                                        - Set the low-pass filter pole.\n");
+					" sl <loc>               - Set the low-pass filter pole.\n");
 	}
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
 					(uint8_t*)
-					"                             <loc> = location for the pole; values are:\n");
+					"                       <loc> = location for the pole; values are:\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 0 -> 480 Hz;\n");
+					(uint8_t*)
+					"                        - 0 -> 480 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 1 -> 320 Hz;\n");
+					(uint8_t*)
+					"                        - 1 -> 320 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 2 -> 160 Hz;\n");
+					(uint8_t*)
+					"                        - 2 -> 160 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 3 -> 80 Hz;\n");
+					(uint8_t*)
+					"                        - 3 -> 80 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 4 -> 56.6 Hz;\n");
+					(uint8_t*)
+					"                        - 4 -> 56.6 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 5 -> 40 Hz;\n");
+					(uint8_t*)
+					"                        - 5 -> 40 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 6 -> 28.3 Hz;\n");
+					(uint8_t*)
+					"                        - 6 -> 28.3 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 7 -> 20 Hz;\n");
+					(uint8_t*)
+					"                        - 7 -> 20 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	if (!short_command) {
 		ret = usr_uart_write_string(dev->cli_device->uart_device,
-					    (uint8_t*)"                             Example: set_lpf 1\n");
+					    (uint8_t*)
+					"                        Example: set_lpf 1\n\n");
 		if(ret != SUCCESS)
 			return ret;
 		ret = usr_uart_write_string(dev->cli_device->uart_device,
 					    (uint8_t*)
-					    " set_hpf <loc> - Set the low-pass filter pole.\n");
+					" set_hpf <loc>          - Set the high-pass filter pole.\n");
 		if(ret != SUCCESS)
 			return ret;
 	}
 	else {
 		ret = usr_uart_write_string(dev->cli_device->uart_device,
-					    (uint8_t*)"                             Example: sl 1\n");
+					    (uint8_t*)
+					"                        Example: sl 1\n\n");
 		if(ret != SUCCESS)
 			return ret;
 		ret = usr_uart_write_string(dev->cli_device->uart_device,
 					    (uint8_t*)
-					    " sh <loc> - Set the low-pass filter pole.\n");
+					" sh <loc>               - Set the low-pass filter pole.\n");
 		if(ret != SUCCESS)
 			return ret;
 	}
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
 					(uint8_t*)
-					"                             <loc> = location for the pole; values are:\n");
+					"                        <loc> = location for the pole; values are:\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 0 -> All pass;\n");
+					(uint8_t*)
+					"                        - 0 -> All pass;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 1 -> 0.011 Hz;\n");
+					(uint8_t*)
+					"                        - 1 -> 0.011 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 2 -> 0.022 Hz;\n");
+					(uint8_t*)
+					"                        - 2 -> 0.022 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 3 -> 0.044 Hz;\n");
+					(uint8_t*)
+					"                        - 3 -> 0.044 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 4 -> 0.087 Hz;\n");
+					(uint8_t*)
+					"                        - 4 -> 0.087 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 5 -> 0.175 Hz;\n");
+					(uint8_t*)
+					"                        - 5 -> 0.175 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 6 -> 0.350 Hz;\n");
+					(uint8_t*)
+					"                        - 6 -> 0.350 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 7 -> 0.700 Hz;\n");
+					(uint8_t*)
+					"                        - 7 -> 0.700 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 8 -> 1.400 Hz;\n");
+					(uint8_t*)
+					"                        - 8 -> 1.400 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 9 -> 2.800 Hz;\n");
+					(uint8_t*)
+					"                        - 9 -> 2.800 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	ret = usr_uart_write_string(dev->cli_device->uart_device,
-					(uint8_t*)"                                       - 10 -> 11.30 Hz;\n");
+					(uint8_t*)
+					"                        - 10 -> 11.30 Hz;\n");
 	if(ret != SUCCESS)
 		return ret;
 	if (!short_command) {
 		ret = usr_uart_write_string(dev->cli_device->uart_device,
-					    (uint8_t*)"                             Example: set_hpf 1\n");
+					    (uint8_t*)
+					"                        Example: set_hpf 1\n\n");
 		if(ret != SUCCESS)
 			return ret;
 		ret = usr_uart_write_string(dev->cli_device->uart_device,
 					    (uint8_t*)
-					    " read_rate <axis>          - Display the angular rate of axis X or Y.\n");
+					" axis_x                - Display the angular rate about the X-Axis.\n");
 		if(ret != SUCCESS)
 			return ret;
 		ret = usr_uart_write_string(dev->cli_device->uart_device,
-						(uint8_t*)
-						"                           - if no axis is passed, both X and Y will be displayed.\n");
-		if(ret != SUCCESS)
-			return ret;
-		if(ret != SUCCESS)
-			return ret;
-		ret = usr_uart_write_string(dev->cli_device->uart_device,
-					     (uint8_t*)"                             Example: read_rate X\n");
+					     (uint8_t*)
+					"                       Example: axis_x\n\n");
 		if(ret != SUCCESS)
 			return ret;
 		ret = usr_uart_write_string(dev->cli_device->uart_device,
 					    (uint8_t*)
-					    " prod_test                 - Run production test.\n");
+					" axis_y                - Display the angular rate about the Y-Axis.\n");
+		if(ret != SUCCESS)
+			return ret;
+		ret = usr_uart_write_string(dev->cli_device->uart_device,
+					     (uint8_t*)
+					"                       Example: axis_y\n\n");
+		if(ret != SUCCESS)
+			return ret;
+		ret = usr_uart_write_string(dev->cli_device->uart_device,
+					    (uint8_t*)
+					" axis_xy                - Display the angular rate in both Axes.\n");
+		if(ret != SUCCESS)
+			return ret;
+		ret = usr_uart_write_string(dev->cli_device->uart_device,
+					     (uint8_t*)
+					"                       Example: axis_xy\n\n");
+		if(ret != SUCCESS)
+			return ret;
+		ret = usr_uart_write_string(dev->cli_device->uart_device,
+					    (uint8_t*)
+					" prod_test             - Run production test.\n");
 		if(ret != SUCCESS)
 			return ret;
 		return usr_uart_write_string(dev->cli_device->uart_device,
-					     (uint8_t*)"                             Example: prod_test\n");
+					     (uint8_t*)
+					"                       Example: prod_test\n");
 	}
 	else{
 		ret = usr_uart_write_string(dev->cli_device->uart_device,
-						(uint8_t*)"                             Example: sh 1\n");
-		if(ret != SUCCESS)
-			return ret;
-		ret = usr_uart_write_string(dev->cli_device->uart_device,
 						(uint8_t*)
-						" r <axis>                  - Display the angular rate of axis X or Y.\n");
+					"                       Example: sh 1\n");
 		if(ret != SUCCESS)
 			return ret;
 		ret = usr_uart_write_string(dev->cli_device->uart_device,
-						(uint8_t*)
-						"                           - if no axis is passed, both X and Y will be displayed.\n");
+					    (uint8_t*)
+					" x                     - Display the angular rate about the X-Axis.\n");
 		if(ret != SUCCESS)
 			return ret;
 		ret = usr_uart_write_string(dev->cli_device->uart_device,
-						 (uint8_t*)"                             Example: r X\n");
+					     (uint8_t*)
+					"                       Example: x\n");
 		if(ret != SUCCESS)
 			return ret;
 		ret = usr_uart_write_string(dev->cli_device->uart_device,
-						(uint8_t*)
-						" t                 - Run production test.\n");
+					    (uint8_t*)
+					" y                     - Display the angular rate about the Y-Axis.\n");
+		if(ret != SUCCESS)
+			return ret;
+		ret = usr_uart_write_string(dev->cli_device->uart_device,
+					     (uint8_t*)
+					"                       Example: y\n");
+		if(ret != SUCCESS)
+			return ret;
+		ret = usr_uart_write_string(dev->cli_device->uart_device,
+					    (uint8_t*)
+					" a                     - Display the angular rate in both Axes.\n");
+		if(ret != SUCCESS)
+			return ret;
+		ret = usr_uart_write_string(dev->cli_device->uart_device,
+					     (uint8_t*)
+					"                       Example: a\n");
+		if(ret != SUCCESS)
+			return ret;
+		ret = usr_uart_write_string(dev->cli_device->uart_device,
+					    (uint8_t*)
+					" t                     - Run production test.\n");
 		if(ret != SUCCESS)
 			return ret;
 		return usr_uart_write_string(dev->cli_device->uart_device,
-						 (uint8_t*)"                             Example: t\n");
+					     (uint8_t*)
+					"                       Example: t\n");
 	}
 
 }
@@ -408,34 +469,27 @@ int32_t adxrs290_pmdz_set_hpf(struct adxrs290_pmdz_dev *dev, uint8_t *arg)
 }
 
 /**
- * Set high-pass filter pole location.
+ * Set Read rate helper.
  *
  * @param [in] dev - Application software handler.
- * @param [in] arg - Pointer to the argument.
+ * @param [in] axis - Axis to read.
  *
  * @return 0 in case of success, negative error code otherwise.
  */
-int32_t adxrs290_pmdz_read_data(struct adxrs290_pmdz_dev *dev, uint8_t *arg)
+int32_t adxrs290_pmdz_read_data(struct adxrs290_pmdz_dev *dev, char axis)
 {
 	int32_t ret=SUCCESS;
-	uint8_t axis;
 	int16_t rateX, rateY;
 	char buff[20];
-	if(!arg) {
-		axis = 0;
-	}
-	else
-	{
-		axis = arg[0];
-	}
-	if (axis=='x' || axis!='X') {
+
+	if (axis=='x') {
 		ret=adxrs290_get_rate_data(dev->adxrs290_device, ADXRS290_CHANNEL_X, &rateX);
 		usr_uart_write_string(dev->cli_device->uart_device,
 				      (uint8_t*)"X-axis rate (LSB): ");
 		sprintf(buff, "%d\n", rateX);
 		usr_uart_write_string(dev->cli_device->uart_device,(uint8_t *)buff);
 	}
-	else if (axis=='y' || axis!='Y'){
+	else if (axis=='y'){
 		ret=adxrs290_get_rate_data(dev->adxrs290_device, ADXRS290_CHANNEL_Y, &rateY);
 		usr_uart_write_string(dev->cli_device->uart_device,
 					  (uint8_t*)"Y-axis rate (LSB): ");
@@ -453,6 +507,51 @@ int32_t adxrs290_pmdz_read_data(struct adxrs290_pmdz_dev *dev, uint8_t *arg)
 		sprintf(buff, "%d\n", rateY);
 				usr_uart_write_string(dev->cli_device->uart_device,(uint8_t *)buff);
 	}
+	return ret;
+}
+
+/**
+ * Read X axis angular rate.
+ *
+ * @param [in] dev - Application software handler.
+ * @param [in] arg - Pointer to the argument. Not in use.
+ *
+ * @return 0 in case of success, negative error code otherwise.
+ */
+int32_t adxrs290_pmdz_read_dataX(struct adxrs290_pmdz_dev *dev, uint8_t *arg)
+{
+	int32_t ret=SUCCESS;
+	adxrs290_pmdz_read_data(dev,'x');
+	return ret;
+}
+
+/**
+ * Read y-axis angular rate.
+ *
+ * @param [in] dev - Application software handler.
+ * @param [in] arg - Pointer to the argument. Not in use.
+ *
+ * @return 0 in case of success, negative error code otherwise.
+ */
+int32_t adxrs290_pmdz_read_dataY(struct adxrs290_pmdz_dev *dev, uint8_t *arg)
+{
+	int32_t ret=SUCCESS;
+	adxrs290_pmdz_read_data(dev,'y');
+	return ret;
+}
+
+/**
+ * Read Both X and Y axes angular rates.
+ *
+ * @param [in] dev - Application software handler.
+ * @param [in] arg - Pointer to the argument. Not in use.
+ *
+ * @return 0 in case of success, negative error code otherwise.
+ */
+int32_t adxrs290_pmdz_read_dataXY(struct adxrs290_pmdz_dev *dev, uint8_t *arg)
+{
+	int32_t ret=SUCCESS;
+	adxrs290_pmdz_read_data(dev, 0);
 	return ret;
 }
 
@@ -488,8 +587,8 @@ void adxrs290_pmdz_get_config(struct adxrs290_pmdz_init_param *init_param)
 	init_param->adxrs290_init.spi_init.chip_select = 0xFF;
 	init_param->adxrs290_init.spi_init.extra = NULL;
 	init_param->adxrs290_init.spi_init.id = SPI_PMOD;
-	init_param->adxrs290_init.spi_init.max_speed_hz = 9000000;
-	init_param->adxrs290_init.spi_init.mode = SPI_MODE_0;
+	init_param->adxrs290_init.spi_init.max_speed_hz = 900000;
+	init_param->adxrs290_init.spi_init.mode = SPI_MODE_3;
 	init_param->adxrs290_init.spi_init.type = ADICUP3029_SPI;
 	init_param->adxrs290_init.mode = ADXRS290_MODE_MEASUREMENT;
 	init_param->adxrs290_init.lpf = ADXRS290_LPF_480HZ;

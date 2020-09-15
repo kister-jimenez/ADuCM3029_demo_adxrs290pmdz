@@ -95,23 +95,24 @@ int32_t adxrs290_reg_write(struct adxrs290_dev *dev, uint8_t address,
  * @return SUCCESS in case of success, FAILURE otherwise.
  */
 int32_t adxrs290_reg_readN(struct adxrs290_dev *dev, uint8_t start_address,
-			  uint8_t **data, uint8_t num_regs)
+			  uint8_t *data, uint8_t num_regs)
 {
-	uint8_t *buff = (uint8_t *)malloc(sizeof(uint8_t)*(num_regs*2));
+	uint8_t *buff = (uint8_t *)malloc(sizeof(uint8_t)*(num_regs+1));
 	uint16_t i;
-	for (i=0; i<num_regs*2;i+=2)
+	for (i=0; i<num_regs;i++)
 	{
-		buff[i]=start_address++;
-		buff[i+1]=0;
+		buff[i]=0x80 | start_address++;
 	}
+	buff[i]=0;
 
-	if(spi_write_and_read(dev->spi_desc, buff, num_regs*2) != SUCCESS)
+	if(spi_write_and_read(dev->spi_desc, buff, num_regs+1) != SUCCESS)
 		return FAILURE;
 
 	for (i=0; i<num_regs;i++)
 	{
-		*data[i] = (uint8_t)buff[2*i+1];
+		*(data+i)= buff[i+1];
 	}
+	free(buff);
 	return SUCCESS;
 }
 
@@ -194,7 +195,7 @@ int32_t adxrs290_get_rate_data(struct adxrs290_dev *dev,
 		enum adxrs290_channel ch, int16_t *rate)
 {
 	uint8_t data[2];
-	if(adxrs290_reg_readN(dev, ADXRS290_REG_DATAX0+ch*2, (uint8_t **)(&data), 2) != SUCCESS)
+	if(adxrs290_reg_readN(dev, ADXRS290_REG_DATAX0+ch*2, &data[0], 2) != SUCCESS)
 		return FAILURE;
 	*rate = ((int16_t)data[1])<<8 | data[0];
 	return SUCCESS;
@@ -210,10 +211,10 @@ int32_t adxrs290_get_rate_dataXY(struct adxrs290_dev *dev,
 		int16_t *rateX, int16_t *rateY)
 {
 	uint8_t data[4];
-	if(adxrs290_reg_readN(dev, ADXRS290_REG_DATAX0, (uint8_t **)(&data), 4) != SUCCESS)
+	if(adxrs290_reg_readN(dev, ADXRS290_REG_DATAX0, &data[0], 4) != SUCCESS)
 		return FAILURE;
-	*rateX = ((uint16_t)data[1])<<8 | data[0];
-	*rateY= ((uint16_t)data[3])<<8 | data[2];
+	*rateX = ((int16_t)data[1])<<8 | data[0];
+	*rateY= ((int16_t)data[3])<<8 | data[2];
 	return SUCCESS;
 }
 
@@ -236,11 +237,27 @@ int32_t adxrs290_init(struct adxrs290_dev **device,
 		goto error;
 
 	ret = spi_init(&dev->spi_desc, &init_param->spi_init);
-	if (!ret)
+	if (ret!= SUCCESS)
 		goto error;
 	ret = adxrs290_reg_read(dev, ADXRS290_REG_DEV_ID, &val);
-	if ((ret!=0) && (val != ADXRS290_DEV_ID))
+	if ((ret!=SUCCESS) && (val != ADXRS290_DEV_ID))
 		goto error;
+	// Enable measurement mode.
+	if (init_param->mode==ADXRS290_MODE_MEASUREMENT)
+	{
+		ret |= adxrs290_reg_write(dev, ADXRS290_REG_POWER_CTL, 0x03);
+		if (ret!=SUCCESS)
+			goto error;
+	}
+
+	// Set initial Band pass filter poles.
+	ret |= adxrs290_set_lpf(dev, init_param->lpf);
+	if (ret!=SUCCESS)
+		goto error;
+	ret |= adxrs290_set_hpf(dev, init_param->hpf);
+	if (ret!=SUCCESS)
+		goto error;
+
 
 	*device = dev;
 
